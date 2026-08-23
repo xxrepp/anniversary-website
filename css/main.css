@@ -1097,6 +1097,15 @@ body.unlocked .side-label { opacity: .8; }
   touch-action: none;
 }
 
+.sphere-hint {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-display); font-style: italic; font-weight: 300;
+  font-size: .82rem; color: var(--ink-faint);
+  pointer-events: none; z-index: 2;
+  letter-spacing: .04em;
+  text-align: center;
+}
+
 .sphere-canvas {
   display: block;
   width: 100%;
