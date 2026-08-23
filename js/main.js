@@ -259,13 +259,6 @@
     scene.add(stars);
 
 
-    /* subtle wireframe sphere outline */
-    const frameGeo = new THREE.SphereGeometry(4.48, 32, 24);
-    const frameMat = new THREE.MeshBasicMaterial({
-      color: 0xE3B878, wireframe: true, transparent: true, opacity: .12, depthWrite: false
-    });
-    const frameSphere = new THREE.Mesh(frameGeo, frameMat);
-    scene.add(frameSphere);
     /* photo sprites — Fibonacci-distributed on sphere surface */
     const photoGroup = new THREE.Group();
     scene.add(photoGroup);
@@ -274,7 +267,7 @@
     const loader = new THREE.TextureLoader();
     const sprites = [];
 
-    /* circular alpha mask — softens square sprite edges into a round disc */
+    /* soft circular alpha mask for round edges */
     const alphaCanvas = document.createElement('canvas');
     alphaCanvas.width = 256; alphaCanvas.height = 256;
     const actx = alphaCanvas.getContext('2d');
@@ -288,12 +281,13 @@
     alphaMap.minFilter = THREE.LinearFilter;
     alphaMap.magFilter = THREE.LinearFilter;
 
+    /* bright placeholder — visible immediately before textures load */
     const fallback = new THREE.CanvasTexture((() => {
       const c = document.createElement('canvas'); c.width = 128; c.height = 128;
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#070B1A'; ctx.fillRect(0, 0, 128, 128);
-      ctx.fillStyle = '#A8C7FA'; ctx.font = '28px Georgia'; ctx.textAlign = 'center';
-      ctx.fillText('\u2726', 64, 76);
+      ctx.fillStyle = '#111831'; ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = '#A8C7FA'; ctx.font = '24px Georgia'; ctx.textAlign = 'center';
+      ctx.fillText('\u2606', 64, 76);
       return c;
     })());
 
@@ -301,11 +295,12 @@
       const src = `${cfg.folder}/${i + 1}.${cfg.ext}`;
       const mat = new THREE.SpriteMaterial({
         map: fallback, alphaMap: alphaMap, color: 0xffffff,
-        transparent: true, opacity: .55, depthWrite: false, depthTest: true
+        transparent: true, opacity: .85, depthWrite: false, depthTest: false
       });
       const sprite = new THREE.Sprite(mat);
+      /* scale 0.95 — photos overlap to form the sphere surface */
       sprite.position.set(pt.x * 4.5, pt.y * 4.5, pt.z * 4.5);
-      sprite.scale.set(.3, .3, 1);
+      sprite.scale.set(.95, .95, 1);
       sprite.userData = { src, idx: i + 1 };
       photoGroup.add(sprite);
       sprites.push(sprite);
@@ -396,7 +391,6 @@
 
       photoGroup.rotation.x = rx;
       photoGroup.rotation.y = ry;
-      frameSphere.rotation.y += .001;
       stars.rotation.y -= .0003;
       stars.rotation.x += .0002;
 
