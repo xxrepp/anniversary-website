@@ -169,6 +169,21 @@
         </div>
         <p class="finale-foot reveal d3">made with love · volume i</p>
       </section>`;
+    },
+
+    gallery(p) {
+      const id = `sphere-${chapterCount}`;
+      return `
+      <section class="chapter" data-gallery='${esc(JSON.stringify({ id, folder: p.folder, count: p.count, ext: p.ext }))}'>
+        ${chapterHead(p)}
+        <div class="sphere-stage reveal d3" id="${id}">
+          <canvas class="sphere-canvas" id="${id}-canvas"></canvas>
+        </div>
+        <div class="sphere-zoom" id="${id}-zoom" hidden>
+          <button class="sphere-zoom-close">&times;</button>
+          <img id="${id}-img" alt="">
+        </div>
+      </section>`;
     }
   };
 
@@ -182,6 +197,206 @@
   }
 
   story.innerHTML = pages.map(p => (builders[p.type] || (() => ''))(p)).join('');
+
+
+  /* ============================================================
+     GALLERY SPHERE — Three.js photo globe
+     ============================================================ */
+  if (window.THREE) {
+    $$('[data-gallery]').forEach(el => {
+      const cfg = JSON.parse(el.dataset.gallery);
+      initGallerySphere(cfg);
+    });
+  }
+
+  function fibonacciSphere(n) {
+    const pts = [];
+    const phi = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < n; i++) {
+      const y = 1 - (i / (n - 1)) * 2;
+      const radius = Math.sqrt(1 - y * y);
+      const theta = phi * i;
+      pts.push({ x: Math.cos(theta) * radius, y: y, z: Math.sin(theta) * radius });
+    }
+    return pts;
+  }
+
+  function initGallerySphere(cfg) {
+    const container = document.getElementById(cfg.id);
+    if (!container) return;
+
+    const canvas = document.getElementById(`${cfg.id}-canvas`);
+    const zoom = document.getElementById(`${cfg.id}-zoom`);
+    const zoomImg = document.getElementById(`${cfg.id}-img`);
+    if (!canvas || !zoom || !zoomImg) return;
+
+    const scene = new THREE.Scene();
+
+    const W = container.clientWidth;
+    const H = container.clientHeight;
+    const camera = new THREE.PerspectiveCamera(45, W / Math.max(H, 1), 0.1, 20);
+    camera.position.z = 8;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(W, H);
+
+    /* background starfield inside the sphere */
+    const starsGeo = new THREE.BufferGeometry();
+    const starsCount = 500;
+    const starsArr = new Float32Array(starsCount * 3);
+    for (let i = 0; i < starsCount * 3; i += 3) {
+      starsArr[i] = (Math.random() - .5) * 16;
+      starsArr[i + 1] = (Math.random() - .5) * 16;
+      starsArr[i + 2] = (Math.random() - .5) * 10;
+    }
+    starsGeo.setAttribute('position', new THREE.BufferAttribute(starsArr, 3));
+    const starsMat = new THREE.PointsMaterial({
+      color: 0xA8C7FA, size: .028, transparent: true, opacity: .65, depthWrite: false
+    });
+    const stars = new THREE.Points(starsGeo, starsMat);
+    scene.add(stars);
+
+    /* gold orbit ring */
+    const ringGeo = new THREE.TorusGeometry(4.55, .025, 16, 100);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xE3B878, transparent: true, opacity: .28, depthWrite: false });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    scene.add(ring);
+
+    /* photo sprites — Fibonacci-distributed on sphere surface */
+    const photoGroup = new THREE.Group();
+    scene.add(photoGroup);
+
+    const points = fibonacciSphere(cfg.count);
+    const loader = new THREE.TextureLoader();
+    const sprites = [];
+
+    const fallback = new THREE.CanvasTexture((() => {
+      const c = document.createElement('canvas'); c.width = 128; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#070B1A'; ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = '#A8C7FA'; ctx.font = '28px Georgia'; ctx.textAlign = 'center';
+      ctx.fillText('\u2726', 64, 76);
+      return c;
+    })());
+
+    points.forEach((pt, i) => {
+      const src = `${cfg.folder}/${i + 1}.${cfg.ext}`;
+      const mat = new THREE.SpriteMaterial({
+        map: fallback, color: 0xffffff, transparent: true, opacity: .55, depthWrite: false
+      });
+      const sprite = new THREE.Sprite(mat);
+      sprite.position.set(pt.x * 4.5, pt.y * 4.5, pt.z * 4.5);
+      sprite.scale.set(.3, .3, 1);
+      sprite.userData = { src, idx: i + 1 };
+      photoGroup.add(sprite);
+      sprites.push(sprite);
+
+      /* load real texture async */
+      loader.load(src,
+        tex => {
+          tex.minFilter = THREE.LinearFilter;
+          tex.magFilter = THREE.LinearFilter;
+          mat.map = tex;
+          mat.opacity = 1;
+          mat.needsUpdate = true;
+        },
+        undefined,
+        () => { mat.opacity = .18; mat.needsUpdate = true; }
+      );
+    });
+
+    /* ---- interaction ---- */
+    let dragging = false, px = 0, py = 0;
+    let rx = 0, ry = 0;
+    let trx = 0, try_ = 0;
+    let auto = true;
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function onDown(e) {
+      dragging = true; auto = false;
+      px = e.clientX; py = e.clientY;
+      container.style.cursor = 'grabbing';
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      try_ += (e.clientX - px) * .005;
+      trx += (e.clientY - py) * .005;
+      trx = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, trx));
+      px = e.clientX; py = e.clientY;
+    }
+    function onUp(e) {
+      if (!dragging) return;
+      const dx = Math.abs(e.clientX - px);
+      const dy = Math.abs(e.clientY - py);
+      dragging = false;
+      container.style.cursor = 'grab';
+      if (dx < 5 && dy < 5) { tryClick(e); }
+      clearTimeout(container._ar);
+      container._ar = setTimeout(() => { auto = true; }, 3000);
+    }
+
+    function tryClick(e) {
+      const rect = container.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(sprites);
+      if (hits.length) {
+        zoomImg.src = hits[0].object.userData.src;
+        zoomImg.alt = `selfie #${hits[0].object.userData.idx}`;
+        zoom.hidden = false;
+        document.body.classList.add('locked');
+      }
+    }
+
+    function closeZoom() {
+      zoom.hidden = true;
+      if (opened) document.body.classList.remove('locked');
+    }
+
+    zoom.querySelector('.sphere-zoom-close').addEventListener('click', closeZoom);
+    zoom.addEventListener('click', e => { if (e.target === zoom) closeZoom(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !zoom.hidden) { closeZoom(); e.stopPropagation(); }
+    }, true);
+
+    container.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    container.style.cursor = 'grab';
+
+    /* ---- render loop ---- */
+    (function loop() {
+      requestAnimationFrame(loop);
+
+      if (auto) try_ += .003;
+
+      rx += (trx - rx) * .08;
+      ry += (try_ - ry) * .08;
+
+      photoGroup.rotation.x = rx;
+      photoGroup.rotation.y = ry;
+      ring.rotation.z += .002;
+      stars.rotation.y -= .0003;
+      stars.rotation.x += .0002;
+
+      renderer.render(scene, camera);
+    })();
+
+    /* ---- resize ---- */
+    new ResizeObserver(() => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }).observe(container);
+  }
 
   /* ============================================================
      2 · STARFIELD CANVAS

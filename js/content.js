@@ -125,67 +125,14 @@ window.SCRAPBOOK_PAGES = [
     ]
   },
 
-  /* 5 — month by month, part two */
+  /* 5 — art gallery sphere */
   {
-    type: 'months',
-    chapter: 'Month by Month',
-    note: 'part two · feb — jul',
-    items: [
-      {
-        m: 'February', y: '2026', note: '[one line about february]',
-        thumb: 'photos/FEB-2.jpeg',
-        photos: [
-          { src: 'photos/FEB-1.jpeg', caption: 'ayangg cantikk' },
-          { src: 'photos/FEB-2.jpeg', caption: 'foto berduaa' },
-          { src: 'photos/FEB-3.jpeg', caption: 'difotoinn ayangg' }
-        ]
-      },
-      {
-        m: 'March', y: '2026', note: '[one line about march]',
-        thumb: 'photos/MAR-2.jpeg',
-        photos: [
-          { src: 'photos/MAR-1.jpeg', caption: 'mam di dpramss' },
-          { src: 'photos/MAR-2.jpeg', caption: 'ciapp mengabdii untuk negeyii' },
-          { src: 'photos/MAR-3.jpeg', caption: 'puass jalan-jalan ke prabuu' }
-        ]
-      },
-      {
-        m: 'April', y: '2026', note: '[one line about april]',
-        thumb: 'photos/APR-2.jpeg',
-        photos: [
-          { src: 'photos/APR-1.jpeg', caption: 'mukaa kusam sepulang kerjaa' },
-          { src: 'photos/APR-2.jpeg', caption: 'kartini & kartono' },
-          { src: 'photos/APR-3.jpeg', caption: 'selfie harii kartinii' }
-        ]
-      },
-      {
-        m: 'May', y: '2026', note: '[one line about may]',
-        thumb: 'photos/MAY-1.jpeg',
-        photos: [
-          { src: 'photos/MAY-1.jpeg', caption: 'kitaa kehujanann' },
-          { src: 'photos/MAY-2.jpeg', caption: 'nangiss habis nontonn film ayahh' },
-          { src: 'photos/MAY-3.jpeg', caption: 'berkunjungg ke rumah ayangg' }
-        ]
-      },
-      {
-        m: 'June', y: '2026', note: '[one line about june]',
-        thumb: 'photos/JUN-1.jpeg',
-        photos: [
-          { src: 'photos/JUN-1.jpeg', caption: 'jogging soree' },
-          { src: 'photos/JUN-2.jpeg', caption: 'nongkii kopilogii lagii' },
-          { src: 'photos/JUN-3.jpeg', caption: 'jogging pagii' }
-        ]
-      },
-      {
-        m: 'July', y: '2026', note: 'almost a year — [one line]',
-        thumb: 'photos/JUL-1.jpeg',
-        photos: [
-          { src: 'photos/JUL-1.jpeg', caption: 'sebelum botakk' },
-          { src: 'photos/JUL-2.jpeg', caption: 'sesudah botakk' },
-          { src: 'photos/JUL-3.jpeg', caption: 'latsarr' }
-        ]
-      }
-    ]
+    type: 'gallery',
+    chapter: 'An Art Gallery Could Never Be As Unique As You',
+    note: 'drag the sphere · tap any photo to open',
+    folder: 'art',
+    count: 50,
+    ext: 'jpeg'
   },
 
   /* 6 — favorite moments, said over text */
