@@ -201,7 +201,7 @@
 
 
   /* ============================================================
-     GALLERY SPHERE — Three.js photo globe
+     GALLERY SPHERE — photo cards forming a 3D globe
      ============================================================ */
   if (window.THREE) {
     $$('[data-gallery]').forEach(el => {
@@ -215,9 +215,9 @@
     const phi = Math.PI * (3 - Math.sqrt(5));
     for (let i = 0; i < n; i++) {
       const y = 1 - (i / (n - 1)) * 2;
-      const radius = Math.sqrt(1 - y * y);
+      const r = Math.sqrt(1 - y * y);
       const theta = phi * i;
-      pts.push({ x: Math.cos(theta) * radius, y: y, z: Math.sin(theta) * radius });
+      pts.push({ x: Math.cos(theta) * r, y, z: Math.sin(theta) * r });
     }
     return pts;
   }
@@ -225,16 +225,17 @@
   function initGallerySphere(cfg) {
     const container = document.getElementById(cfg.id);
     if (!container) return;
-
     const canvas = document.getElementById(`${cfg.id}-canvas`);
     const zoom = document.getElementById(`${cfg.id}-zoom`);
     const zoomImg = document.getElementById(`${cfg.id}-img`);
     if (!canvas || !zoom || !zoomImg) return;
 
-    const scene = new THREE.Scene();
+    const SPHERE_R = 4.5;
+    const CARD_SIZE = 1.08;
 
-    const W = container.clientWidth;
-    const H = container.clientHeight;
+    /* ---- scene ---- */
+    const scene = new THREE.Scene();
+    const W = container.clientWidth, H = container.clientHeight;
     const camera = new THREE.PerspectiveCamera(45, W / Math.max(H, 1), 0.1, 20);
     camera.position.z = 8;
 
@@ -242,127 +243,151 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(W, H);
 
-    /* background starfield inside the sphere */
+    /* starfield backdrop */
     const starsGeo = new THREE.BufferGeometry();
-    const starsCount = 500;
-    const starsArr = new Float32Array(starsCount * 3);
-    for (let i = 0; i < starsCount * 3; i += 3) {
+    const starsArr = new Float32Array(600 * 3);
+    for (let i = 0; i < starsArr.length; i += 3) {
       starsArr[i] = (Math.random() - .5) * 16;
       starsArr[i + 1] = (Math.random() - .5) * 16;
       starsArr[i + 2] = (Math.random() - .5) * 10;
     }
     starsGeo.setAttribute('position', new THREE.BufferAttribute(starsArr, 3));
-    const starsMat = new THREE.PointsMaterial({
-      color: 0xA8C7FA, size: .028, transparent: true, opacity: .65, depthWrite: false
-    });
-    const stars = new THREE.Points(starsGeo, starsMat);
+    const stars = new THREE.Points(starsGeo,
+      new THREE.PointsMaterial({ color: 0xA8C7FA, size: .028, transparent: true, opacity: .55, depthWrite: false }));
     scene.add(stars);
 
+    /* ---- photo cards ---- */
+    const cardGroup = new THREE.Group();
+    scene.add(cardGroup);
 
-    /* photo sprites — Fibonacci-distributed on sphere surface */
-    const photoGroup = new THREE.Group();
-    scene.add(photoGroup);
+    /* shared rounded-rect alpha — softens card edges */
+    const alphaC = document.createElement('canvas'); alphaC.width = 256; alphaC.height = 256;
+    const actx = alphaC.getContext('2d');
+    const ag = actx.createRadialGradient(128, 128, 96, 128, 128, 128);
+    ag.addColorStop(0, 'rgba(255,255,255,1)');
+    ag.addColorStop(.78, 'rgba(255,255,255,1)');
+    ag.addColorStop(1, 'rgba(255,255,255,0)');
+    actx.fillStyle = ag; actx.fillRect(0, 0, 256, 256);
+    const alphaTex = new THREE.CanvasTexture(alphaC);
+    alphaTex.minFilter = THREE.LinearFilter; alphaTex.magFilter = THREE.LinearFilter;
 
-    const points = fibonacciSphere(cfg.count);
-    const loader = new THREE.TextureLoader();
-    const sprites = [];
-
-    /* soft circular alpha mask for round edges */
-    const alphaCanvas = document.createElement('canvas');
-    alphaCanvas.width = 256; alphaCanvas.height = 256;
-    const actx = alphaCanvas.getContext('2d');
-    const grad = actx.createRadialGradient(128, 128, 88, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(255,255,255,1)');
-    grad.addColorStop(.75, 'rgba(255,255,255,1)');
-    grad.addColorStop(1, 'rgba(255,255,255,0)');
-    actx.fillStyle = grad;
-    actx.fillRect(0, 0, 256, 256);
-    const alphaMap = new THREE.CanvasTexture(alphaCanvas);
-    alphaMap.minFilter = THREE.LinearFilter;
-    alphaMap.magFilter = THREE.LinearFilter;
-
-    /* bright placeholder — visible immediately before textures load */
-    const fallback = new THREE.CanvasTexture((() => {
+    /* shared placeholder */
+    const ph = (() => {
       const c = document.createElement('canvas'); c.width = 128; c.height = 128;
       const ctx = c.getContext('2d');
       ctx.fillStyle = '#111831'; ctx.fillRect(0, 0, 128, 128);
-      ctx.fillStyle = '#A8C7FA'; ctx.font = '24px Georgia'; ctx.textAlign = 'center';
-      ctx.fillText('\u2606', 64, 76);
-      return c;
-    })());
+      ctx.fillStyle = '#A8C7FA'; ctx.font = '22px Georgia'; ctx.textAlign = 'center';
+      ctx.fillText('\u2606', 64, 72);
+      return new THREE.CanvasTexture(c);
+    })();
 
-    points.forEach((pt, i) => {
-      const src = `${cfg.folder}/${i + 1}.${cfg.ext}`;
-      const mat = new THREE.SpriteMaterial({
-        map: fallback, alphaMap: alphaMap, color: 0xffffff,
-        transparent: true, opacity: .85, depthWrite: false, depthTest: false
+    const sharedGeo = new THREE.PlaneGeometry(CARD_SIZE, CARD_SIZE);
+    const cards = [];
+    const loader = new THREE.TextureLoader();
+    const v3 = new THREE.Vector3();
+    const q = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 1, 0);
+
+    fibonacciSphere(cfg.count).forEach((pt, i) => {
+      const mat = new THREE.MeshBasicMaterial({
+        map: ph, alphaMap: alphaTex, color: 0xffffff,
+        transparent: true, opacity: .82, depthWrite: true, alphaTest: .4,
+        side: THREE.DoubleSide
       });
-      const sprite = new THREE.Sprite(mat);
-      /* scale 0.95 — photos overlap to form the sphere surface */
-      sprite.position.set(pt.x * 4.5, pt.y * 4.5, pt.z * 4.5);
-      sprite.scale.set(.95, .95, 1);
-      sprite.userData = { src, idx: i + 1 };
-      photoGroup.add(sprite);
-      sprites.push(sprite);
+      const card = new THREE.Mesh(sharedGeo, mat);
 
-      /* load real texture async */
-      loader.load(src,
-        tex => {
-          tex.minFilter = THREE.LinearFilter;
-          tex.magFilter = THREE.LinearFilter;
-          mat.map = tex;
-          mat.opacity = 1;
-          mat.needsUpdate = true;
-        },
-        undefined,
-        () => { mat.opacity = .18; mat.needsUpdate = true; }
+      /* position on sphere + orient outward */
+      v3.set(pt.x * SPHERE_R, pt.y * SPHERE_R, pt.z * SPHERE_R);
+      card.position.copy(v3);
+      /* outward normal = normalize(position) = pt itself */
+      q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), v3.clone().normalize());
+      card.setRotationFromQuaternion(q);
+
+      card.userData = { src: `${cfg.folder}/${i + 1}.${cfg.ext}`, idx: i + 1, baseScale: 1, mat };
+      cardGroup.add(card);
+      cards.push(card);
+
+      loader.load(card.userData.src, tex => {
+        tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+        mat.map = tex; mat.opacity = 1; mat.needsUpdate = true;
+      }, undefined,
+        () => { mat.opacity = .15; mat.needsUpdate = true; }
       );
     });
 
-    /* ---- interaction ---- */
+    /* ---- interaction state ---- */
     let dragging = false, px = 0, py = 0;
-    let rx = 0, ry = 0;
-    let trx = 0, try_ = 0;
-    let auto = true;
+    let vx = 0, vy = 0;          /* angular velocity */
+    let rotX = 0, rotY = 0;      /* accumulated rotation */
+    let hovered = null;
+    let autoSpin = true;
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
+    function pointerPos(e) {
+      const rect = container.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    }
+
+    function doHover() {
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(cards);
+      const hit = hits.length ? hits[0].object : null;
+      if (hovered === hit) return;
+      if (hovered) {
+        hovered.scale.setScalar(1);
+        hovered.userData.mat.opacity = .82;
+        hovered.userData.mat.needsUpdate = true;
+      }
+      hovered = hit;
+      if (hovered) {
+        hovered.scale.setScalar(1.18);
+        hovered.userData.mat.opacity = 1;
+        hovered.userData.mat.needsUpdate = true;
+        container.style.cursor = 'pointer';
+      } else if (!dragging) {
+        container.style.cursor = 'grab';
+      }
+    }
+
     function onDown(e) {
-      dragging = true; auto = false;
+      dragging = true; autoSpin = false; vx = 0; vy = 0;
       px = e.clientX; py = e.clientY;
       container.style.cursor = 'grabbing';
     }
+
     function onMove(e) {
-      if (!dragging) return;
-      try_ += (e.clientX - px) * .005;
-      trx += (e.clientY - py) * .005;
-      trx = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, trx));
-      px = e.clientX; py = e.clientY;
+      pointerPos(e);
+      if (dragging) {
+        const dx = e.clientX - px, dy = e.clientY - py;
+        vy += dx * .004;
+        vx += dy * .004;
+        vx = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, vx));
+        px = e.clientX; py = e.clientY;
+      }
+      doHover();
     }
+
     function onUp(e) {
       if (!dragging) return;
       const dx = Math.abs(e.clientX - px);
       const dy = Math.abs(e.clientY - py);
       dragging = false;
-      container.style.cursor = 'grab';
-      if (dx < 5 && dy < 5) { tryClick(e); }
+      if (dx < 4 && dy < 4 && hovered) tryClick(hovered);
+      /* restart auto-spin after 2s idle if velocity is near zero */
       clearTimeout(container._ar);
-      container._ar = setTimeout(() => { auto = true; }, 3000);
+      container._ar = setTimeout(() => {
+        if (Math.abs(vx) < .0003 && Math.abs(vy) < .0003) autoSpin = true;
+      }, 2000);
     }
 
-    function tryClick(e) {
-      const rect = container.getBoundingClientRect();
-      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      const hits = raycaster.intersectObjects(sprites);
-      if (hits.length) {
-        zoomImg.src = hits[0].object.userData.src;
-        zoomImg.alt = `selfie #${hits[0].object.userData.idx}`;
-        zoom.hidden = false;
-        document.body.classList.add('locked');
-      }
+    function tryClick(card) {
+      zoomImg.src = card.userData.src;
+      zoomImg.alt = `selfie #${card.userData.idx}`;
+      zoom.hidden = false;
+      document.body.classList.add('locked');
     }
 
     function closeZoom() {
@@ -375,22 +400,37 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !zoom.hidden) { closeZoom(); e.stopPropagation(); }
     }, true);
+
     container.addEventListener('pointerdown', onDown);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
+    /* also do hover on mousemove without drag */
+    window.addEventListener('pointerleave', () => {
+      if (hovered) {
+        hovered.scale.setScalar(1);
+        hovered.userData.mat.opacity = .82;
+        hovered.userData.mat.needsUpdate = true;
+        hovered = null;
+      }
+    });
     container.style.cursor = 'grab';
 
     /* ---- render loop ---- */
     (function loop() {
       requestAnimationFrame(loop);
 
-      if (auto) try_ += .003;
+      /* auto-spin: subtle constant drift */
+      if (autoSpin && !dragging) vy += .002;
 
-      rx += (trx - rx) * .08;
-      ry += (try_ - ry) * .08;
+      /* integrate velocity + friction */
+      const friction = dragging ? 1 : .94;
+      rotX += vx; rotY += vy;
+      vx *= friction; vy *= friction;
+      /* snap tiny velocities to zero */
+      if (!dragging && Math.abs(vx) < .0001) vx = 0;
+      if (!dragging && Math.abs(vy) < .0001) vy = 0;
 
-      photoGroup.rotation.x = rx;
-      photoGroup.rotation.y = ry;
+      cardGroup.rotation.set(rotX, rotY, 0);
       stars.rotation.y -= .0003;
       stars.rotation.x += .0002;
 
@@ -399,8 +439,7 @@
 
     /* ---- resize ---- */
     new ResizeObserver(() => {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
+      const w = container.clientWidth, h = container.clientHeight;
       if (!w || !h) return;
       renderer.setSize(w, h);
       camera.aspect = w / h;
