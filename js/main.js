@@ -231,7 +231,7 @@
     if (!canvas || !zoom || !zoomImg) return;
 
     const SPHERE_R = 4.5;
-    const CARD_SIZE = 1.08;
+    const CARD_SIZE = 1.32;
 
     /* ---- scene ---- */
     const scene = new THREE.Scene();
@@ -260,24 +260,31 @@
     const cardGroup = new THREE.Group();
     scene.add(cardGroup);
 
-    /* shared rounded-rect alpha — softens card edges */
+    /* shared rounded-disc alpha */
     const alphaC = document.createElement('canvas'); alphaC.width = 256; alphaC.height = 256;
     const actx = alphaC.getContext('2d');
-    const ag = actx.createRadialGradient(128, 128, 96, 128, 128, 128);
+    const ag = actx.createRadialGradient(128, 128, 98, 128, 128, 128);
     ag.addColorStop(0, 'rgba(255,255,255,1)');
-    ag.addColorStop(.78, 'rgba(255,255,255,1)');
+    ag.addColorStop(.82, 'rgba(255,255,255,1)');
     ag.addColorStop(1, 'rgba(255,255,255,0)');
     actx.fillStyle = ag; actx.fillRect(0, 0, 256, 256);
     const alphaTex = new THREE.CanvasTexture(alphaC);
     alphaTex.minFilter = THREE.LinearFilter; alphaTex.magFilter = THREE.LinearFilter;
 
-    /* shared placeholder */
+    /* shared placeholder — bright pin with subtle ring, visible against dark bg */
     const ph = (() => {
-      const c = document.createElement('canvas'); c.width = 128; c.height = 128;
+      const c = document.createElement('canvas'); c.width = 256; c.height = 256;
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#111831'; ctx.fillRect(0, 0, 128, 128);
-      ctx.fillStyle = '#A8C7FA'; ctx.font = '22px Georgia'; ctx.textAlign = 'center';
-      ctx.fillText('\u2606', 64, 72);
+      /* subtle gradient background */
+      const bg = ctx.createRadialGradient(128, 128, 20, 128, 128, 128);
+      bg.addColorStop(0, '#1E2A4A'); bg.addColorStop(1, '#0D1226');
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, 256, 256);
+      /* outer ring */
+      ctx.strokeStyle = 'rgba(168,199,250,.3)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(128, 128, 64, 0, Math.PI * 2); ctx.stroke();
+      /* star icon */
+      ctx.fillStyle = 'rgba(168,199,250,.9)'; ctx.font = '48px Georgia'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('\u2606', 128, 128);
       return new THREE.CanvasTexture(c);
     })();
 
@@ -286,12 +293,11 @@
     const loader = new THREE.TextureLoader();
     const v3 = new THREE.Vector3();
     const q = new THREE.Quaternion();
-    const up = new THREE.Vector3(0, 1, 0);
 
     fibonacciSphere(cfg.count).forEach((pt, i) => {
       const mat = new THREE.MeshBasicMaterial({
         map: ph, alphaMap: alphaTex, color: 0xffffff,
-        transparent: true, opacity: .82, depthWrite: true, alphaTest: .4,
+        transparent: true, opacity: .82, depthWrite: true, alphaTest: .2,
         side: THREE.DoubleSide
       });
       const card = new THREE.Mesh(sharedGeo, mat);
