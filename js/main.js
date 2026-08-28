@@ -483,32 +483,82 @@
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     W = sky.width = innerWidth * dpr;
     H = sky.height = innerHeight * dpr;
-    stars = Array.from({ length: reduceMotion ? 60 : Math.round(W * H / 16000) }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      r: (Math.random() * 1.3 + .4) * dpr,
-      a: Math.random() * .5 + .18,
-      tw: Math.random() * Math.PI * 2,
-      sp: Math.random() * .35 + .06,
-      gold: Math.random() < .12
-    }));
+    stars = Array.from({ length: reduceMotion ? 70 : Math.round(W * H / 12000) }, () => {
+      const sparkle = Math.random() < 0.22;
+      return {
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: (sparkle ? Math.random() * 1.5 + 1.2 : Math.random() * 1.1 + 0.5) * dpr,
+        a: Math.random() * 0.4 + (sparkle ? 0.6 : 0.35),
+        tw: Math.random() * Math.PI * 2,
+        twSpeed: Math.random() * 2 + 1.5,
+        sp: (Math.random() * 0.25 + 0.05) * dpr,
+        gold: Math.random() < 0.25,
+        sparkle: sparkle,
+        sparkleSize: (Math.random() * 7 + 5) * dpr
+      };
+    });
   }
 
   function drawSky(t) {
     sctx.clearRect(0, 0, W, H);
+    const timeSec = t * 0.001;
+
     for (const s of stars) {
-      const tw = reduceMotion ? 1 : (.72 + .28 * Math.sin(t * .001 * s.sp * 4 + s.tw));
-      sctx.globalAlpha = s.a * tw;
-      sctx.fillStyle = s.gold ? '#E3B878' : '#A8C7FA';
+      const pulse = reduceMotion ? 1 : (0.65 + 0.35 * Math.sin(timeSec * s.twSpeed + s.tw));
+      const alpha = Math.min(1, s.a * pulse);
+      const color = s.gold ? '#F4DBA8' : '#D0E2FF';
+
+      sctx.save();
+      sctx.globalAlpha = alpha;
+
+      // Soft glow aura for brighter stars
+      if (s.sparkle || s.r > 1.2) {
+        const glowRad = s.r * 2.8;
+        const glow = sctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowRad);
+        glow.addColorStop(0, s.gold ? 'rgba(227, 184, 120, 0.45)' : 'rgba(168, 199, 250, 0.45)');
+        glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        sctx.fillStyle = glow;
+        sctx.beginPath();
+        sctx.arc(s.x, s.y, glowRad, 0, Math.PI * 2);
+        sctx.fill();
+      }
+
+      // Star core
+      sctx.fillStyle = color;
       sctx.beginPath();
       sctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
       sctx.fill();
+
+      // 4-point diffraction sparkle like the polaroid
+      if (s.sparkle) {
+        const size = s.sparkleSize * pulse;
+        sctx.strokeStyle = s.gold ? '#E3B878' : '#A8C7FA';
+        sctx.lineWidth = 1;
+        sctx.beginPath();
+        sctx.moveTo(s.x - size, s.y);
+        sctx.lineTo(s.x + size, s.y);
+        sctx.moveTo(s.x, s.y - size);
+        sctx.lineTo(s.x, s.y + size);
+        sctx.stroke();
+
+        // White hot center
+        sctx.fillStyle = '#FFFFFF';
+        sctx.beginPath();
+        sctx.arc(s.x, s.y, s.r * 0.6, 0, Math.PI * 2);
+        sctx.fill();
+      }
+
+      sctx.restore();
+
       if (!reduceMotion) {
         s.y -= s.sp;
-        if (s.y < -4) { s.y = H + 4; s.x = Math.random() * W; }
+        if (s.y < -10) {
+          s.y = H + 10;
+          s.x = Math.random() * W;
+        }
       }
     }
-    sctx.globalAlpha = 1;
     if (!reduceMotion) raf = requestAnimationFrame(drawSky);
   }
 
