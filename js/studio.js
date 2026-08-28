@@ -1,10 +1,7 @@
 /* ============================================================
-   studio.js — the Year Two photo studio.
-   Flow: source (camera or gallery) → edit (pan/zoom inside the
-   frame) → download PNG in three sizes.
-   Camera fails soft: any getUserMedia problem silently falls
-   back to the gallery picker. The photo is persisted downscaled
-   (≤1600px, JPEG) so localStorage never hits its quota.
+   studio.js — Photobox Polaroid Studio (Multi-photo).
+   Allows snapping up to 4 photos via camera or selecting multiple
+   photos from the gallery, compositing them into a 2x2 Photobox Polaroid.
    ============================================================ */
 (function () {
   'use strict';
@@ -17,14 +14,12 @@
   const steps = { source: $('stepSource'), camera: $('stepCamera'), edit: $('stepEdit') };
   const video = $('cameraVideo');
   const canvas = $('editCanvas');
-  const zoom = $('zoomSlider');
-  const KEY = 'anniv.yearTwoPhoto';
+  const photoTray = $('photoTray');
+  const KEY = 'anniv.yearTwoPhotos';
   const FRAME_KEY = 'anniv.yearTwoFrame';
 
   let stream = null;
-  let source = null;          /* Image or canvas holding the chosen photo */
-  let presetKey = '4x5';
-  let view = { scale: 1, offsetX: 0, offsetY: 0 };
+  let sources = []; // Array of Image or Canvas objects (max 4)
 
   const camSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   if (!camSupported) $('takePhotoBtn').hidden = true;
@@ -39,8 +34,8 @@
   function open() {
     studio.hidden = false;
     document.body.classList.add('studio-open', 'no-scroll');
-    E.ensureFonts().then(() => { if (source && !steps.edit.hidden) draw(); });
-    if (source) enterEdit();
+    E.ensureFonts().then(() => { if (sources.length && !steps.edit.hidden) draw(); });
+    if (sources.length) enterEdit();
     else showStep('source');
   }
 
@@ -60,7 +55,19 @@
     }
   }
 
+  function updateCameraCounter() {
+    const counter = $('cameraCounter');
+    const doneBtn = $('cameraDone');
+    const current = sources.length + 1;
+    if (counter) counter.textContent = `photo ${Math.min(4, current)} of 4`;
+    if (doneBtn) doneBtn.hidden = sources.length === 0;
+  }
+
   async function startCamera() {
+    if (sources.length >= 4) {
+      enterEdit();
+      return;
+    }
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1920 } },
@@ -68,194 +75,195 @@
       });
       video.srcObject = stream;
       await video.play().catch(() => {});
+      updateCameraCounter();
       showStep('camera');
     } catch (err) {
-      /* denied / unavailable / in-app browser — fall back quietly */
       stopStream();
       $('takePhotoBtn').hidden = true;
-      $('sourceNote').textContent = "The camera didn't open here — choose a photo from your gallery instead.";
+      $('sourceNote').textContent = "Camera couldn't be accessed — please select photos from gallery.";
       showStep('source');
     }
   }
 
   function shutter() {
-    if (!video.videoWidth) return;
+    if (!video.videoWidth || sources.length >= 4) return;
     const c = document.createElement('canvas');
     c.width = video.videoWidth;
     c.height = video.videoHeight;
-    /* preview is mirrored (selfie convention); the capture is not */
     c.getContext('2d').drawImage(video, 0, 0);
-    setSource(c);
+
+    sources.push(c);
+    updateCameraCounter();
+    persist();
+
+    if (sources.length >= 4) {
+      stopStream();
+      enterEdit();
+    }
   }
 
   /* ---------------- gallery ---------------- */
 
-  function handleFile(file) {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => { URL.revokeObjectURL(url); setSource(img); };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      $('sourceNote').textContent = "That file couldn't be read — try another photo.";
-    };
-    img.src = url;
+  function handleFiles(fileList) {
+    if (!fileList || !fileList.length) return;
+    const files = Array.from(fileList).slice(0, 4 - sources.length);
+    if (!files.length) return;
+
+    let loaded = 0;
+    files.forEach(file => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        sources.push(img);
+        loaded++;
+        if (loaded === files.length) {
+          persist();
+          enterEdit();
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        loaded++;
+        if (loaded === files.length && sources.length) {
+          persist();
+          enterEdit();
+        }
+      };
+      img.src = url;
+    });
   }
 
-  /* ---------------- edit ---------------- */
-
-  function setSource(imgLike) {
-    source = imgLike;
-    view = { scale: 1, offsetX: 0, offsetY: 0 };
-    persist();
-    enterEdit();
-  }
+  /* ---------------- edit & preview ---------------- */
 
   function enterEdit() {
     showStep('edit');
-    syncTabs();
-    zoom.value = view.scale;
     sizeCanvas();
+    renderTray();
     draw();
   }
 
   function sizeCanvas() {
-    const p = E.PRESETS[presetKey];
     const box = $('editStage');
-    const maxW = Math.max(200, box.clientWidth);
-    const maxH = Math.min(window.innerHeight * 0.52, 520);
-    const k = Math.min(maxW / p.w, maxH / p.h);
+    const maxW = Math.max(200, box.clientWidth || 360);
+    const maxH = Math.min(window.innerHeight * 0.54, 540);
+    const k = Math.min(maxW / E.CARD_WIDTH, maxH / E.CARD_HEIGHT);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(p.w * k * dpr);
-    canvas.height = Math.round(p.h * k * dpr);
-    canvas.style.width = Math.round(p.w * k) + 'px';
-    canvas.style.height = Math.round(p.h * k) + 'px';
+
+    canvas.width = Math.round(E.CARD_WIDTH * k * dpr);
+    canvas.height = Math.round(E.CARD_HEIGHT * k * dpr);
+    canvas.style.width = Math.round(E.CARD_WIDTH * k) + 'px';
+    canvas.style.height = Math.round(E.CARD_HEIGHT * k) + 'px';
   }
 
   let rafPending = false;
   function draw() {
-    if (!source || rafPending) return;
+    if (rafPending) return;
     rafPending = true;
     requestAnimationFrame(() => {
       rafPending = false;
-      E.renderComposite(canvas, source, presetKey, view);
+      E.renderComposite(canvas, sources);
     });
   }
 
-  /* drag to pan, pinch or slider to zoom */
-  const pointers = new Map();
-  let pinchStart = null;
+  function renderTray() {
+    if (!photoTray) return;
+    photoTray.innerHTML = '';
+    sources.forEach((src, idx) => {
+      const thumb = document.createElement('div');
+      thumb.className = 'tray-item';
 
-  canvas.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    canvas.setPointerCapture(e.pointerId);
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.size === 2) {
-      const [a, b] = [...pointers.values()];
-      pinchStart = { d: Math.hypot(a.x - b.x, a.y - b.y), scale: view.scale };
-    }
-  });
+      const imgPreview = document.createElement('img');
+      imgPreview.src = src.toDataURL ? src.toDataURL('image/jpeg', 0.6) : src.src;
 
-  canvas.addEventListener('pointermove', e => {
-    const p = pointers.get(e.pointerId);
-    if (!p) return;
-    const dx = e.clientX - p.x, dy = e.clientY - p.y;
-    p.x = e.clientX; p.y = e.clientY;
-    if (pointers.size === 1) pan(dx, dy);
-    else if (pointers.size === 2 && pinchStart) {
-      const [a, b] = [...pointers.values()];
-      const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (d > 0 && pinchStart.d > 0) setScale(pinchStart.scale * d / pinchStart.d);
-    }
-  });
+      const delBtn = document.createElement('button');
+      delBtn.className = 'tray-del';
+      delBtn.innerHTML = '&times;';
+      delBtn.title = 'remove photo';
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sources.splice(idx, 1);
+        persist();
+        if (sources.length === 0) {
+          showStep('source');
+        } else {
+          renderTray();
+          draw();
+        }
+      });
 
-  const lift = e => {
-    pointers.delete(e.pointerId);
-    if (pointers.size < 2) pinchStart = null;
-  };
-  canvas.addEventListener('pointerup', lift);
-  canvas.addEventListener('pointercancel', lift);
-
-  function pan(dxCss, dyCss) {
-    if (!source) return;
-    const p = E.PRESETS[presetKey];
-    const cssW = canvas.clientWidth || 1;
-    const exportPerCss = p.w / cssW;
-    const { s0 } = E.photoGeometry(source, presetKey);
-    const f = exportPerCss / (s0 * view.scale);   /* source px per css px */
-    view.offsetX -= dxCss * f;
-    view.offsetY -= dyCss * f;
-    E.clampView(source, presetKey, view);
-    draw();
-  }
-
-  function setScale(z) {
-    view.scale = Math.min(4, Math.max(1, z));
-    zoom.value = view.scale;
-    E.clampView(source, presetKey, view);
-    draw();
-  }
-
-  function syncTabs() {
-    document.querySelectorAll('#presetTabs [data-preset]').forEach(b => {
-      const on = b.dataset.preset === presetKey;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-pressed', String(on));
+      thumb.appendChild(imgPreview);
+      thumb.appendChild(delBtn);
+      photoTray.appendChild(thumb);
     });
+
+    const addBtn = $('addPhotoBtn');
+    if (addBtn) {
+      addBtn.style.display = sources.length >= 4 ? 'none' : 'inline-flex';
+    }
   }
 
-  /* ---------------- persistence (downscaled, quota-safe) ---------------- */
+  /* ---------------- persistence ---------------- */
 
   function persist() {
     try {
-      const w = source.width, h = source.height;
-      const k = Math.min(1, 1600 / Math.max(w, h));
-      const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(w * k));
-      c.height = Math.max(1, Math.round(h * k));
-      c.getContext('2d').drawImage(source, 0, 0, c.width, c.height);
-      localStorage.setItem(KEY, c.toDataURL('image/jpeg', 0.85));
-    } catch (err) { /* fine — the photo just won't survive a refresh */ }
+      const serialized = sources.map(src => {
+        const w = src.width || src.videoWidth || 800;
+        const h = src.height || src.videoHeight || 800;
+        const k = Math.min(1, 1000 / Math.max(w, h));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * k));
+        c.height = Math.max(1, Math.round(h * k));
+        c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+        return c.toDataURL('image/jpeg', 0.82);
+      });
+      localStorage.setItem(KEY, JSON.stringify(serialized));
+    } catch (err) { /* localStorage quota guard */ }
     persistFrame();
   }
 
-  /* framed composite for the back-cover scrapbook strap */
   async function persistFrame() {
-    if (!source) return;
+    if (!sources.length) return;
     try {
       await E.ensureFonts();
-      const p = E.PRESETS['4x5'];
-      const maxSide = 720;
-      const k = Math.min(1, maxSide / Math.max(p.w, p.h));
+      const maxSide = 900;
+      const k = Math.min(1, maxSide / Math.max(E.CARD_WIDTH, E.CARD_HEIGHT));
       const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(p.w * k));
-      c.height = Math.max(1, Math.round(p.h * k));
-      E.renderComposite(c, source, '4x5', view);
-      localStorage.setItem(FRAME_KEY, c.toDataURL('image/jpeg', 0.82));
+      c.width = Math.max(1, Math.round(E.CARD_WIDTH * k));
+      c.height = Math.max(1, Math.round(E.CARD_HEIGHT * k));
+      E.renderComposite(c, sources);
+      localStorage.setItem(FRAME_KEY, c.toDataURL('image/jpeg', 0.85));
       window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
     } catch (err) {
       try {
         window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
-      } catch (e2) { /* ignore */ }
+      } catch (e2) {}
     }
   }
 
   function restore() {
     try {
-      const data = localStorage.getItem(KEY);
-      if (!data) return;
-      const img = new Image();
-      img.onload = () => {
-        source = img;
-        view = { scale: 1, offsetX: 0, offsetY: 0 };
-        /* if she's sitting on the picker when the photo loads, jump ahead */
-        if (!studio.hidden && !steps.source.hidden) enterEdit();
-        /* refresh framed back-cover scrap if missing */
-        if (!localStorage.getItem(FRAME_KEY)) persistFrame();
-        else window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
-      };
-      img.src = data;
-    } catch (err) { /* ignore */ }
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list) || !list.length) return;
+
+      let loaded = 0;
+      sources = [];
+      list.slice(0, 4).forEach(dataUrl => {
+        const img = new Image();
+        img.onload = () => {
+          sources.push(img);
+          loaded++;
+          if (loaded === list.length) {
+            if (!studio.hidden && !steps.source.hidden) enterEdit();
+            if (!localStorage.getItem(FRAME_KEY)) persistFrame();
+            else window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
+          }
+        };
+        img.src = dataUrl;
+      });
+    } catch (err) {}
   }
 
   /* ---------------- wiring ---------------- */
@@ -271,23 +279,33 @@
 
   $('takePhotoBtn').addEventListener('click', startCamera);
   $('shutterBtn').addEventListener('click', shutter);
-  $('cameraBack').addEventListener('click', () => showStep('source'));
-  $('uploadBtn').addEventListener('click', () => $('photoInput').click());
-  $('photoInput').addEventListener('change', e => handleFile(e.target.files && e.target.files[0]));
-  $('changePhotoBtn').addEventListener('click', () => {
-    $('sourceNote').textContent = '';
-    showStep('source');
+  $('cameraDone').addEventListener('click', () => {
+    stopStream();
+    enterEdit();
+  });
+  $('cameraBack').addEventListener('click', () => {
+    stopStream();
+    if (sources.length) enterEdit();
+    else showStep('source');
   });
 
-  zoom.addEventListener('input', () => setScale(parseFloat(zoom.value)));
+  $('uploadBtn').addEventListener('click', () => $('photoInput').click());
+  $('photoInput').addEventListener('change', e => {
+    handleFiles(e.target.files);
+    e.target.value = '';
+  });
 
-  document.querySelectorAll('#presetTabs [data-preset]').forEach(b => {
-    b.addEventListener('click', () => {
-      presetKey = b.dataset.preset;
-      syncTabs();
-      sizeCanvas();
-      if (source) { E.clampView(source, presetKey, view); draw(); }
-    });
+  $('addPhotoBtn').addEventListener('click', () => {
+    $('photoInput').click();
+  });
+
+  $('changePhotoBtn').addEventListener('click', () => {
+    sources = [];
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(FRAME_KEY);
+    window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
+    $('sourceNote').textContent = '';
+    showStep('source');
   });
 
   window.addEventListener('resize', () => {
@@ -295,15 +313,15 @@
   });
 
   $('downloadBtn').addEventListener('click', async () => {
-    if (!source) return;
+    if (!sources.length) return;
     const btn = $('downloadBtn');
     const note = $('downloadNote');
     btn.disabled = true;
-    note.textContent = 'making your picture…';
+    note.textContent = 'printing your polaroid…';
     try {
-      await E.exportPNG(source, presetKey, view);
+      await E.exportPNG(sources);
       await persistFrame();
-      note.textContent = 'saved! check your downloads — and peek at the back cover.';
+      note.textContent = 'saved! check your downloads & see it pinned at the end.';
     } catch (err) {
       note.textContent = 'something went wrong — try again?';
     }

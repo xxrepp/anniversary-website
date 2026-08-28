@@ -96,7 +96,7 @@
         <div class="source-buttons">
           <button id="takePhotoBtn" class="btn primary">use the camera</button>
           <button id="uploadBtn" class="btn">choose from gallery</button>
-          <input type="file" id="photoInput" accept="image/*" capture="user" hidden>
+          <input type="file" id="photoInput" accept="image/*" multiple hidden>
         </div>
         <p id="sourceNote" class="tiny-note" aria-live="polite"></p>
       </section>
@@ -104,31 +104,23 @@
       <section id="stepCamera" class="step" hidden>
         <div class="camera-stage">
           <video id="cameraVideo" autoplay playsinline muted></video>
-          <div class="camera-frame" aria-hidden="true"><span>year two begins now</span></div>
+          <div class="camera-frame" aria-hidden="true"><span id="cameraCounter">photo 1 of 4</span></div>
         </div>
         <div class="camera-actions">
           <button id="cameraBack" class="btn ghost">back</button>
           <button id="shutterBtn" class="shutter" aria-label="take the photo"></button>
-          <span class="camera-spacer" aria-hidden="true"></span>
+          <button id="cameraDone" class="btn primary btn-sm" hidden>done</button>
         </div>
       </section>
 
       <section id="stepEdit" class="step" hidden>
-        <div class="preset-tabs" id="presetTabs" role="group" aria-label="picture size">
-          <button data-preset="4x5" class="tab active" aria-pressed="true">post 4:5</button>
-          <button data-preset="9x16" class="tab" aria-pressed="false">story 9:16</button>
-          <button data-preset="16x9" class="tab" aria-pressed="false">wide 16:9</button>
-        </div>
         <div class="edit-stage" id="editStage">
           <canvas id="editCanvas" width="10" height="10" aria-label="drag to position your photo"></canvas>
         </div>
-        <label class="zoom-row">
-          <span class="tiny-note">zoom</span>
-          <input type="range" id="zoomSlider" min="1" max="4" step="0.01" value="1" aria-label="zoom the photo">
-        </label>
-        <p class="tiny-note center">drag the picture to position it · pinch or slide to zoom</p>
+        <div class="photo-tray" id="photoTray"></div>
         <div class="edit-actions">
-          <button id="changePhotoBtn" class="btn ghost">change photo</button>
+          <button id="addPhotoBtn" class="btn ghost">+ add photo</button>
+          <button id="changePhotoBtn" class="btn ghost">reset all</button>
           <button id="downloadBtn" class="btn primary">download</button>
         </div>
         <p id="downloadNote" class="tiny-note center" aria-live="polite"></p>

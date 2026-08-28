@@ -735,9 +735,7 @@
     const data = localStorage.getItem(FRAME_KEY);
     if (!data) return;
     slot.classList.remove('empty');
-    slot.innerHTML = `
-      <img src="${data}" alt="the first photo of year two">
-      <p class="cap">year two, photo one</p>`;
+    slot.innerHTML = `<img src="${data}" alt="the first photo of year two">`;
   }
 
   window.addEventListener('yearTwoPhotoSaved', refreshFinale);
