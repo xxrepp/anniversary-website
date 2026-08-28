@@ -17,11 +17,10 @@
   const CARD_HEIGHT = 1920;
 
   const COPY = {
-    headerKicker: 'VOLUME II · CHAPTER VIII',
     album: 'Museum of Us',
     big1: 'Year Two',
     sub: 'the first moments of our second year',
-    tail: 'AUGUST 30, 2026 · TO BE CONTINUED'
+    tail: 'AUGUST 30, 2026'
   };
 
   const PAL = {
@@ -126,21 +125,53 @@
     ctx.restore();
   }
 
-  function drawCrescentMoon(ctx, cx, cy, r, color) {
+  function drawFullMoon(ctx, cx, cy, r) {
     ctx.save();
-    ctx.fillStyle = color;
+
+    // Soft radial moon glow
+    const glow = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 2.2);
+    glow.addColorStop(0, 'rgba(244, 219, 168, 0.4)');
+    glow.addColorStop(0.5, 'rgba(227, 184, 120, 0.15)');
+    glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(cx, cy, r, -Math.PI * 0.45, Math.PI * 0.65, false);
-    ctx.quadraticCurveTo(cx - r * 0.2, cy + r * 0.2, cx + r * 0.3, cy - r * 0.95);
-    ctx.closePath();
+    ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Soft moon halo
-    ctx.shadowColor = PAL.goldGlow;
-    ctx.shadowBlur = r * 1.5;
-    ctx.strokeStyle = 'rgba(227, 184, 120, 0.4)';
+    // Moon base sphere
+    const moonGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+    moonGrad.addColorStop(0, '#FFF6E0');
+    moonGrad.addColorStop(0.7, '#E8C58C');
+    moonGrad.addColorStop(1, '#C79D5C');
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = moonGrad;
+    ctx.fill();
+
+    // Subtle maria / crater textures
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = 'rgba(168, 128, 70, 0.22)';
+    [
+      [cx - r * 0.3, cy + r * 0.15, r * 0.32],
+      [cx + r * 0.25, cy - r * 0.2, r * 0.24],
+      [cx + r * 0.1, cy + r * 0.35, r * 0.28],
+      [cx - r * 0.1, cy - r * 0.4, r * 0.18]
+    ].forEach(([mx, my, mr]) => {
+      ctx.beginPath();
+      ctx.arc(mx, my, mr, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+
+    // Crisp subtle rim
+    ctx.strokeStyle = 'rgba(255, 246, 224, 0.6)';
     ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
+
     ctx.restore();
   }
 
@@ -267,27 +298,20 @@
     });
     ctx.restore();
 
-    // 4. Header Section: Title & Crescent Moon
-    const headerY = 110 * scale;
+    // 4. Header Section: Title & Full Moon
+    const headerY = 124 * scale;
     ctx.save();
     ctx.textAlign = 'center';
 
-    // Crescent moon icon above header
-    drawCrescentMoon(ctx, W * 0.5, headerY - 26 * scale, 13 * scale, PAL.gold);
-
-    // Kicker
-    ctx.font = `500 ${15 * scale}px ${FONT_BODY}`;
-    ctx.fillStyle = PAL.gold;
-    ctx.letterSpacing = `${3 * scale}px`;
-    ctx.fillText(COPY.headerKicker, W * 0.5, headerY + 22 * scale);
+    // Full glowing moon above header
+    drawFullMoon(ctx, W * 0.5, headerY - 32 * scale, 18 * scale);
 
     // Main album title
-    ctx.font = `300 ${36 * scale}px ${FONT_DISPLAY}`;
+    ctx.font = `300 ${40 * scale}px ${FONT_DISPLAY}`;
     ctx.fillStyle = PAL.ink;
-    ctx.letterSpacing = `${1 * scale}px`;
-    ctx.fillText(COPY.album, W * 0.5, headerY + 68 * scale);
+    ctx.letterSpacing = `${2 * scale}px`;
+    ctx.fillText(COPY.album, W * 0.5, headerY + 46 * scale);
     ctx.restore();
-
     // 5. 2x2 Photo Grid Area
     const gridPadX = 64 * scale;
     const gridTop = 230 * scale;
@@ -351,11 +375,11 @@
     ctx.letterSpacing = `${1 * scale}px`;
     ctx.fillText(COPY.sub, W * 0.5, footerCenterY + 44 * scale);
 
-    // Bottom Date Tag
-    ctx.font = `600 ${14 * scale}px ${FONT_BODY}`;
+    // Bottom Date Tag with Infinity Sign (∞)
+    ctx.font = `500 ${15 * scale}px ${FONT_BODY}`;
     ctx.fillStyle = PAL.gold;
     ctx.letterSpacing = `${3.5 * scale}px`;
-    ctx.fillText(COPY.tail, W * 0.5, footerCenterY + 84 * scale);
+    ctx.fillText(`${COPY.tail} · ∞`, W * 0.5, footerCenterY + 84 * scale);
 
     ctx.restore();
   }
