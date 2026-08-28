@@ -46,11 +46,20 @@
     },
 
     intro(p) {
+      let bodyContent = '';
+      if (Array.isArray(p.body)) {
+        bodyContent = p.body.map(para => `<p>${esc(para)}</p>`).join('');
+      } else if (p.body) {
+        const lines = String(p.body).split(/\n\n+/);
+        bodyContent = lines.map(line => `<p>${esc(line)}</p>`).join('');
+      }
       return `
       <section class="chapter">
         <div class="prose-panel reveal">
           <p class="lead">${esc(p.heading)}</p>
-          <p>${esc(p.body)}</p>
+          ${bodyContent}
+          ${p.quote ? `<blockquote class="prose-quote">${esc(p.quote)}</blockquote>` : ''}
+          ${p.highlight ? `<div class="prose-highlight"><p class="highlight-text">${esc(p.highlight)}</p></div>` : ''}
           <p class="sign">${esc(p.sign)}</p>
         </div>
       </section>`;
@@ -178,7 +187,6 @@
         ${chapterHead(p)}
         <div class="sphere-stage reveal d3" id="${id}">
           <canvas class="sphere-canvas" id="${id}-canvas"></canvas>
-          <p class="sphere-hint">drag to rotate &middot; tap to open</p>
         </div>
         <div class="sphere-zoom" id="${id}-zoom" hidden>
           <button class="sphere-zoom-close">&times;</button>
@@ -231,13 +239,19 @@
     if (!canvas || !zoom || !zoomImg) return;
 
     const SPHERE_R = 4.5;
-    const CARD_SIZE = 1.32;
+    const CARD_SIZE = 1.44;
 
     /* ---- scene ---- */
     const scene = new THREE.Scene();
     const W = container.clientWidth, H = container.clientHeight;
-    const camera = new THREE.PerspectiveCamera(45, W / Math.max(H, 1), 0.1, 20);
-    camera.position.z = 8;
+    const camera = new THREE.PerspectiveCamera(45, W / Math.max(H, 1), .1, 20);
+    /* pull back until the entire sphere silhouette fits the narrower FOV */
+    function frameCamera() {
+      const fovY = THREE.MathUtils.degToRad(camera.fov);
+      const fovX = 2 * Math.atan(Math.tan(fovY / 2) * camera.aspect);
+      camera.position.z = SPHERE_R / (.86 * Math.tan(Math.min(fovX, fovY) / 2));
+    }
+    frameCamera();
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -364,18 +378,21 @@
       container.style.cursor = 'grabbing';
     }
 
+    const DRAG_GAIN = .0009;     /* rad per pixel of drag */
+    const MAX_V    = .015;        /* per-frame velocity cap (fling limit) */
+    function clampV(v) { return Math.max(-MAX_V, Math.min(MAX_V, v)); }
+
     function onMove(e) {
       pointerPos(e);
       if (dragging) {
         const dx = e.clientX - px, dy = e.clientY - py;
-        vy += dx * .004;
-        vx += dy * .004;
+        vy = clampV(vy + dx * DRAG_GAIN);
+        vx = clampV(vx + dy * DRAG_GAIN);
         vx = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, vx));
         px = e.clientX; py = e.clientY;
       }
       doHover();
     }
-
     function onUp(e) {
       if (!dragging) return;
       const dx = Math.abs(e.clientX - px);
@@ -426,15 +443,15 @@
       requestAnimationFrame(loop);
 
       /* auto-spin: subtle constant drift */
-      if (autoSpin && !dragging) vy += .002;
+      if (autoSpin && !dragging) vy += .00035;
 
-      /* integrate velocity + friction */
-      const friction = dragging ? 1 : .94;
+      /* integrate velocity + friction (stiffer after release so drag flings die quickly) */
+      const friction = dragging ? 1 : .88;
       rotX += vx; rotY += vy;
       vx *= friction; vy *= friction;
       /* snap tiny velocities to zero */
-      if (!dragging && Math.abs(vx) < .0001) vx = 0;
-      if (!dragging && Math.abs(vy) < .0001) vy = 0;
+      if (!dragging && Math.abs(vx) < .00025) vx = 0;
+      if (!dragging && Math.abs(vy) < .00025) vy = 0;
 
       cardGroup.rotation.set(rotX, rotY, 0);
       stars.rotation.y -= .0003;
@@ -450,6 +467,7 @@
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      frameCamera();
     }).observe(container);
   }
 

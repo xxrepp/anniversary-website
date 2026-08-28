@@ -39,10 +39,11 @@ window.SCRAPBOOK_PAGES = [
   {
     type: 'intro',
     heading: 'haloo, ayaanggg.',
-    body: 'SELAMAT SATU TAHUNNN. sepanjang satu tahun waktu yang kita lalui bersama, banyak momen yang kita lewati bersama, banyak momen yang kita abadikan bersama. di setiap pertemuan, aku selalu mau mengabadikan momen bersama kamu. kalo kamu bertanya-tanya untuk apa foto terus kalo sama aku, untukk iniii sayangkuuu. SELAMATT DATANGG DI MUSEUM OF US',
-    sign: '— With love, Aldi'
+    body: 'SELAMAT SATU TAHUNNN. Sepanjang satu tahun, 12 bulan, 365 hari waktu yang kita lalui bersama, banyak momen yang kita lewati bersama, banyak momen yang kita abadikan bersama. Di setiap pertemuan, aku selalu mau mengabadikan momen bersama kamu. Aku gamau ada momen kita yang tertinggal. Kalo kamu bertanya-tanya untuk apa foto terus kalo sama aku, untukk iniii sayangkuuu.',
+    quote: 'Memories may fade with time, but pictures and videos let us relive the moments we never want to forget.',
+    highlight: 'Proudly present, Memory of Us',
+    sign: '— With love, Aldi Kurniawan'
   },
-
   /* 2 — how we started */
   {
     type: 'polaroids',
@@ -59,14 +60,14 @@ window.SCRAPBOOK_PAGES = [
   {
     type: 'photo',
     src: 'photos/1-4.JPG',
-    caption: 'the first photo I ever took of you — [swap this photo + line]'
+    caption: '🤍'
   },
 
-  /* 4 — month by month, part one */
+  /* 4 — month by month */
   {
     type: 'months',
     chapter: 'Month by Month',
-    note: 'part one · aug — jan',
+    note: 'timeline perjalanan kitaa',
     items: [
       {
         m: 'August', y: '2025', note: 'first date kitaaa',
@@ -78,7 +79,7 @@ window.SCRAPBOOK_PAGES = [
         ]
       },
       {
-        m: 'September', y: '2025', note: '[one line about september]',
+        m: 'September', y: '2025', note: 'jalan-jalan pertamaa kitaaa',
         thumb: 'photos/SEP-1.jpeg',
         photos: [
           { src: 'photos/SEP-1.jpeg', caption: 'selfie pertama kitaa setelah jadiann' },
@@ -87,7 +88,7 @@ window.SCRAPBOOK_PAGES = [
         ]
       },
       {
-        m: 'October', y: '2025', note: '[one line about october]',
+        m: 'October', y: '2025', note: 'bulan ulang tahun ayangg',
         thumb: 'photos/OCT-1.jpeg',
         photos: [
           { src: 'photos/OCT-1.jpeg', caption: 'ngerayain ultahh ayangg' },
@@ -96,7 +97,7 @@ window.SCRAPBOOK_PAGES = [
         ]
       },
       {
-        m: 'November', y: '2025', note: '[one line about november]',
+        m: 'November', y: '2025', note: 'pertamaa kali kita ngonserr',
         thumb: 'photos/NOV-2.jpeg',
         photos: [
           { src: 'photos/NOV-1.jpeg', caption: 'bobooo' },
@@ -105,7 +106,7 @@ window.SCRAPBOOK_PAGES = [
         ]
       },
       {
-        m: 'December', y: '2025', note: '[one line about december]',
+        m: 'December', y: '2025', note: 'bulan ulang tahun akuu',
         thumb: 'photos/DEC-2.jpeg',
         photos: [
           { src: 'photos/DEC-1.jpeg', caption: 'jalan ke prabuu nontonn avatarr' },
@@ -114,12 +115,66 @@ window.SCRAPBOOK_PAGES = [
         ]
       },
       {
-        m: 'January', y: '2026', note: '[one line about january]',
+        m: 'January', y: '2026', note: 'kitaa nongkii di palembangg',
         thumb: 'photos/JAN-2.jpeg',
         photos: [
           { src: 'photos/JAN-1.jpeg', caption: 'nongkii di kopilogii' },
           { src: 'photos/JAN-2.jpeg', caption: 'nongkii di nakaa' },
           { src: 'photos/JAN-3.jpeg', caption: 'nongkii di musii' }
+        ]
+      },
+      {
+        m: 'February', y: '2026', note: 'nongkii dii benoite',
+        thumb: 'photos/FEB-2.jpeg',
+        photos: [
+          { src: 'photos/FEB-1.jpeg', caption: 'ayangg cantikk' },
+          { src: 'photos/FEB-2.jpeg', caption: 'foto berduaa' },
+          { src: 'photos/FEB-3.jpeg', caption: 'difotoinn ayangg' }
+        ]
+      },
+      {
+        m: 'March', y: '2026', note: 'kita nyeblak di prabuu',
+        thumb: 'photos/MAR-2.jpeg',
+        photos: [
+          { src: 'photos/MAR-1.jpeg', caption: 'mam di dpramss' },
+          { src: 'photos/MAR-2.jpeg', caption: 'ciapp mengabdii untuk negeyii' },
+          { src: 'photos/MAR-3.jpeg', caption: 'puass jalan-jalan ke prabuu' }
+        ]
+      },
+      {
+        m: 'April', y: '2026', note: 'kartini & kartono',
+        thumb: 'photos/APR-2.jpeg',
+        photos: [
+          { src: 'photos/APR-1.jpeg', caption: 'mukaa kusam sepulang kerjaa' },
+          { src: 'photos/APR-2.jpeg', caption: 'kartini & kartono' },
+          { src: 'photos/APR-3.jpeg', caption: 'selfie harii kartinii' }
+        ]
+      },
+      {
+        m: 'May', y: '2026', note: 'mei full jalan-jalann',
+        thumb: 'photos/MAY-1.jpeg',
+        photos: [
+          { src: 'photos/MAY-1.jpeg', caption: 'kitaa kehujanann' },
+          { src: 'photos/MAY-2.jpeg', caption: 'nangiss habis nontonn film ayahh' },
+          { src: 'photos/MAY-3.jpeg', caption: 'berkunjungg ke rumah ayangg' }
+        ]
+      },
+      {
+        m: 'June', y: '2026', note: 'junii full joggingg',
+        thumb: 'photos/JUN-1.jpeg',
+        photos: [
+          { src: 'photos/JUN-1.jpeg', caption: 'jogging soree' },
+          { src: 'photos/JUN-2.jpeg', caption: 'nongkii kopilogii lagii' },
+          { src: 'photos/JUN-3.jpeg', caption: 'jogging pagii' }
+        ]
+      },
+      {
+        m: 'July', y: '2026', note: 'persiapan latsarr',
+        thumb: 'photos/JUL-1.jpeg',
+        photos: [
+          { src: 'photos/JUL-1.jpeg', caption: 'sebelum botakk' },
+          { src: 'photos/JUL-2.jpeg', caption: 'sesudah botakk' },
+          { src: 'photos/JUL-3.jpeg', caption: 'latsarr' }
         ]
       }
     ]
@@ -128,8 +183,8 @@ window.SCRAPBOOK_PAGES = [
   /* 5 — art gallery sphere */
   {
     type: 'gallery',
-    chapter: 'An Art Gallery Could Never Be As Unique As You',
-    note: 'drag the sphere · tap any photo to open',
+    chapter: "The Moon Is Beatiful, Isn't it?",
+    note: 'galeri pap ayanggg',
     folder: 'art',
     count: 50,
     ext: 'jpeg'
@@ -152,12 +207,12 @@ window.SCRAPBOOK_PAGES = [
   {
     type: 'notes',
     chapter: 'Little Things',
-    note: 'in no particular order',
+    note: 'i love about you',
     items: [
-      { text: 'the way you narrate your own cooking' },
-      { text: 'your laugh in the quiet parts of movies' },
-      { text: '[a little thing you love #3]' },
-      { text: '[a little thing you love #4]' },
+      { text: 'aku cinta masakan kamuu' },
+      { text: 'aku cinta cara kamu ketawaa' },
+      { text: 'aku cinta kerandomann kamuu' },
+      { text: 'aku cinta cara kamu perhatian ke akuu' },
       { text: '[a little thing you love #5]' },
       { text: '[a little thing you love #6]' }
     ]
@@ -180,7 +235,7 @@ window.SCRAPBOOK_PAGES = [
     type: 'photo',
     chapter: 'Together Now',
     src: 'photos/7-1.jpeg',
-    caption: 'one year in — [swap this for a recent one of us]'
+    caption: 'cieee udahh setahunn'
   },
 
   /* 10 — year two studio */
@@ -188,16 +243,16 @@ window.SCRAPBOOK_PAGES = [
     type: 'studio',
     chapter: 'Year Two',
     note: 'begins august 30, 2026',
-    body: 'Volume one ends here — which means volume two needs a first photo. Take one right now (or pick one), and it comes framed for the start of our second year. It also gets strapped onto the back cover of this book.',
-    buttonLabel: 'open the little photo studio',
-    after: 'it makes a picture you can save + post'
+    body: 'mari kita buka lembaran baru untuk tahun kedua dan tahun-tahun selanjutnya. Aku udah sediain photobox untuk kita. Potret pertama kita di tahun kedua',
+    buttonLabel: '📸',
+    after: 'Sesi potret yang selalu kucinta'
   },
 
   /* 11 — back cover */
   {
     type: 'backcover',
     title: 'the end of volume i',
-    sub: 'see you in volume ii · august 30, 2026',
+    sub: 'terus bersama sampai tahun kedua dan tahun-tahun selanjutnya, ya sayang?',
     scrapHint: 'your year-two photo lives here'
   }
 ];
