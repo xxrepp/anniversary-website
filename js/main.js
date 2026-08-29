@@ -138,7 +138,14 @@
     },
 
     letter(p) {
-      const paras = (p.body || []).map(t => `<p>${esc(t)}</p>`).join('');
+      let paras = [];
+      if (Array.isArray(p.body)) {
+        paras = p.body;
+      } else if (p.body) {
+        paras = String(p.body).split(/\n\n+/);
+      }
+      const parasHtml = paras.map((t, idx) => `<p style="--idx:${idx}">${esc(t)}</p>`).join('');
+      const signHtml = p.sign ? `<p class="sign" style="--idx:${paras.length}">${esc(p.sign)}</p>` : '';
       return `
       <section class="chapter">
         ${chapterHead(p)}
@@ -147,8 +154,8 @@
             <div class="seal" aria-hidden="true">&hearts;</div>
             <p class="seal-hint" id="sealHint">tap the seal to read</p>
             <div class="letter-body" id="letterBody" hidden>
-              ${paras}
-              <p class="sign">${esc(p.sign)}</p>
+              ${parasHtml}
+              ${signHtml}
             </div>
           </div>
         </div>
@@ -567,34 +574,123 @@
   addEventListener('resize', sizeSky);
 
   /* ============================================================
-     3 · GATE — press & hold the moon orb
+     3 · GATE — press & hold the moon orb with full asset preloading
      ============================================================ */
 
   const gate = $('#gate');
   const orb = $('#gateOrb');
   const orbFill = $('#orbProgress');
+  const gateLine = $('#gateLine') || $('.gate-line');
   const audio = $('#bgMusic');
   const musicBtn = $('#musicBtn');
   const HOLD_MS = 900;
   const RING_LEN = 351.86;   /* 2πr, r=56 in the SVG viewBox */
 
   let holdStart = 0, holdRaf = null, opened = false;
+  let isPageLoaded = false;
+
+  /* Preload all images and assets before user can unlock */
+  function preloadAllAssets() {
+    orb.classList.add('is-loading');
+    orb.setAttribute('aria-disabled', 'true');
+    const urls = new Set();
+
+    // 1. Gather all photos and images from scrapbook data
+    (window.SCRAPBOOK_PAGES || []).forEach(p => {
+      if (p.src) urls.add(p.src);
+      if (p.items && Array.isArray(p.items)) {
+        p.items.forEach(it => {
+          if (it.src) urls.add(it.src);
+          if (it.thumb) urls.add(it.thumb);
+          if (it.photos && Array.isArray(it.photos)) {
+            it.photos.forEach(ph => { if (ph.src) urls.add(ph.src); });
+          }
+        });
+      }
+      if (p.folder && p.count) {
+        for (let i = 1; i <= p.count; i++) {
+          urls.add(`${p.folder}/${i}.${p.ext || 'jpeg'}`);
+        }
+      }
+    });
+
+    // 2. Also collect any image elements rendered in the DOM
+    $$('img').forEach(img => {
+      if (img.src && !img.src.startsWith('data:')) urls.add(img.src);
+    });
+
+    const assetList = Array.from(urls);
+    let loadedCount = 0;
+    const total = assetList.length;
+
+    const onAssetLoaded = () => {
+      loadedCount++;
+      if (gateLine && !isPageLoaded) {
+        const pct = Math.round((loadedCount / Math.max(total, 1)) * 100);
+        gateLine.textContent = `preparing the stars... ${pct}%`;
+      }
+      if (loadedCount >= total) {
+        finishLoading();
+      }
+    };
+
+    if (total === 0) {
+      finishLoading();
+      return;
+    }
+
+    // Load each image
+    assetList.forEach(url => {
+      const img = new Image();
+      img.onload = onAssetLoaded;
+      img.onerror = onAssetLoaded; // don't block forever if a photo 404s
+      img.src = url;
+    });
+
+    // Fallback safety timeout (12s maximum) so gate never permanently freezes on slow networks
+    setTimeout(() => {
+      if (!isPageLoaded) finishLoading();
+    }, 12000);
+  }
+
+  // Also wait for document fonts and window load
+  const fontsPromise = document.fonts ? document.fonts.ready : Promise.resolve();
+  const windowLoadPromise = new Promise(resolve => {
+    if (document.readyState === 'complete') resolve();
+    else window.addEventListener('load', resolve, { once: true });
+  });
+
+  Promise.all([fontsPromise, windowLoadPromise]).then(() => {
+    preloadAllAssets();
+  });
+
+  function finishLoading() {
+    if (isPageLoaded) return;
+    isPageLoaded = true;
+    orb.classList.remove('is-loading');
+    orb.removeAttribute('aria-disabled');
+    if (gateLine) {
+      gateLine.classList.remove('is-loading');
+      gateLine.textContent = 'press & hold the moon';
+    }
+  }
 
   function holdTick() {
+    if (!isPageLoaded) return;
     const pct = Math.min(1, (performance.now() - holdStart) / HOLD_MS);
     orbFill.style.strokeDashoffset = String(RING_LEN * (1 - pct));
     if (pct >= 1) { openGate(); return; }
     holdRaf = requestAnimationFrame(holdTick);
   }
   function holdDown(e) {
-    if (opened) return;
+    if (opened || !isPageLoaded) return;
     e.preventDefault();
     orb.classList.add('holding');          /* rings whirl */
     holdStart = performance.now();
     holdRaf = requestAnimationFrame(holdTick);
   }
   function holdUp() {
-    if (opened) return;
+    if (opened || !isPageLoaded) return;
     cancelAnimationFrame(holdRaf);
     orb.classList.remove('holding');
     orbFill.style.strokeDashoffset = String(RING_LEN);
@@ -603,13 +699,16 @@
   orb.addEventListener('pointerdown', holdDown);
   addEventListener('pointerup', holdUp);
   addEventListener('pointercancel', holdUp);
-  /* keyboard: Enter/Space opens immediately */
+  /* keyboard: Enter/Space opens immediately when loaded */
   orb.addEventListener('keydown', e => {
-    if ((e.key === 'Enter' || e.key === ' ') && !opened) { e.preventDefault(); openGate(); }
+    if ((e.key === 'Enter' || e.key === ' ') && !opened && isPageLoaded) {
+      e.preventDefault();
+      openGate();
+    }
   });
 
   function openGate() {
-    if (opened) return;
+    if (opened || !isPageLoaded) return;
     opened = true;
     cancelAnimationFrame(holdRaf);
     orbFill.style.strokeDashoffset = '0';

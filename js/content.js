@@ -38,8 +38,8 @@ window.SCRAPBOOK_PAGES = [
   /* 1 — opening note */
   {
     type: 'intro',
-    heading: 'haloo, ayaanggg.',
-    body: 'SELAMAT SATU TAHUNNN. Sepanjang satu tahun, 12 bulan, 365 hari waktu yang kita lalui bersama, banyak momen yang kita lewati bersama, banyak momen yang kita abadikan bersama. Di setiap pertemuan, aku selalu mau mengabadikan momen bersama kamu. Aku gamau ada momen kita yang tertinggal. Kalo kamu bertanya-tanya untuk apa foto terus kalo sama aku, untukk iniii sayangkuuu.',
+    heading: 'SELAMAT SATU TAHUN, SAYANGKUUU.',
+    body: 'Sepanjang satu tahun, 12 bulan, 365 hari, 8.760 jam, 525.600 menit, 31.536.00 detik waktu yang kita lalui bersama, banyak momen yang kita lewati bersama, banyak momen yang kita abadikan bersama. Terima kasih sudah datang dan mewarnai hidup aku dengan semua warna-warni pelangi yang kamu bawa. Di setiap pertemuan, aku selalu mau mengabadikan momen bersama kamu. Aku gamau ada momen kita yang tertinggal. Kalo kamu bertanya-tanya untuk apa foto terus kalo sama aku, untukk iniii sayangkuuu.',
     quote: 'Memories may fade with time, but pictures and videos let us relive the moments we never want to forget.',
     highlight: 'Proudly present, Memory of Us',
     sign: '— With love, Aldi Kurniawan'
@@ -73,9 +73,9 @@ window.SCRAPBOOK_PAGES = [
         m: 'August', y: '2025', note: 'first date kitaaa',
         thumb: 'photos/AUG-1.jpeg',
         photos: [
-          { src: 'photos/AUG-1.jpeg', caption: 'day one' },
-          { src: 'photos/AUG-2.jpeg', caption: 'still smiling' },
-          { src: 'photos/AUG-3.jpeg', caption: 'already ours' }
+          { src: 'photos/AUG-1.jpeg', caption: 'aku memberanikan diri untuk ajak kamu selfie' },
+          { src: 'photos/AUG-2.jpeg', caption: 'pada saat itu deg-deg an sekalii' },
+          { src: 'photos/AUG-3.jpeg', caption: 'keliatan dari muka aku yang sangat canggung dan kamu cantik sekali' }
         ]
       },
       {
@@ -155,8 +155,8 @@ window.SCRAPBOOK_PAGES = [
         thumb: 'photos/MAY-1.jpeg',
         photos: [
           { src: 'photos/MAY-1.jpeg', caption: 'kitaa kehujanann' },
-          { src: 'photos/MAY-2.jpeg', caption: 'nangiss habis nontonn film ayahh' },
-          { src: 'photos/MAY-3.jpeg', caption: 'berkunjungg ke rumah ayangg' }
+          { src: 'photos/MAY-2.jpeg', caption: 'nangiss habis nontonn film' },
+          { src: 'photos/MAY-3.jpeg', caption: 'berkunjungg ke rumah ayangg bersama ortu akuu' }
         ]
       },
       {
@@ -184,7 +184,7 @@ window.SCRAPBOOK_PAGES = [
   {
     type: 'gallery',
     chapter: "The Moon Is Beatiful, Isn't it?",
-    note: 'galeri pap ayanggg',
+    note: 'galeri pap bidadari akuuu',
     folder: 'art',
     count: 50,
     ext: 'jpeg'
@@ -213,8 +213,8 @@ window.SCRAPBOOK_PAGES = [
       { text: 'aku cinta cara kamu ketawaa' },
       { text: 'aku cinta kerandomann kamuu' },
       { text: 'aku cinta cara kamu perhatian ke akuu' },
-      { text: '[a little thing you love #5]' },
-      { text: '[a little thing you love #6]' }
+      { text: 'aku cinta menghabiskan waktu bersama kamu' },
+      { text: 'aku cinta semua hal tentang kamu' }
     ]
   },
 
@@ -224,10 +224,17 @@ window.SCRAPBOOK_PAGES = [
     chapter: 'A Letter to You',
     note: 'break the seal',
     body: [
-      '[This is where the real letter goes. Write it the way you talk — a year deserves more than a caption.]',
-      '[Second paragraph — the thing you have been meaning to say out loud.]'
+      'Halo sayangku🤍',
+      'Selamat satu tahun ayang. Terima kasih untuk 365 hari yang sudah kita lalui bersama. Banyak suka dan duka yang kita lalui bersama, banyak moment yang kita lewatin bersama, banyak obrolan yang sudah kita bicarakan, banyak janji yang sudah kita buat, dan satu komitmen yang kita jaga bersama.',
+      'Selama satu tahun ini, aku selalu bersyukur setiap harinya bisa ditemani pasangan yang se MasyaAllah kamu.',
+	  'Dan di tahun depan, hubungan kita akan lebih serius lagi. InsyaAllah, di tahun depan kita akan mengusahakan niat baik kita bersama untuk menikah.',
+	  'Aku berdoa perjalanan kita di tahun depan dan tahun-tahun selanjutnya selalu dijaga dan dilancarkan, selalu saling mencintai dan mengusahakan satu sama lain.',
+	  'Tidak banyak yang bisa aku ucapkan di ucapan anniversary kali ini, selain terima kasih atas kehadiran kamu di hidup aku.' ,
+	  "'Kau adalah semua jawaban dari doa yang kupanjatkan, dengan hadirmu di hidupku sudah kumerasa cukup'",
+	  "'Hati ini telah menetapkan engkau sosok yang kan temani, di masa ini, masa nanti, dan masa indah lainnya'",
+	  'I love you more, sayangku, cintaku, satu-tahunku'
     ],
-    sign: '— always, [your name]'
+    sign: '— always, Aldi Kurniawan'
   },
 
   /* 9 — together now */
@@ -243,7 +250,7 @@ window.SCRAPBOOK_PAGES = [
     type: 'studio',
     chapter: 'Year Two',
     note: 'begins august 30, 2026',
-    body: 'mari kita buka lembaran baru untuk tahun kedua dan tahun-tahun selanjutnya. Aku udah sediain photobox untuk kita. Potret pertama kita di tahun kedua',
+    body: 'mari kita buka lembaran baru untuk tahun kedua dan tahun-tahun selanjutnya. Aku udah sediain photobox untuk kita. Potret pertama kita di tahun kedua.',
     buttonLabel: '📸',
     after: 'Sesi potret yang selalu kucinta'
   },
@@ -252,7 +259,7 @@ window.SCRAPBOOK_PAGES = [
   {
     type: 'backcover',
     title: 'the end of volume i',
-    sub: 'terus bersama sampai tahun kedua dan tahun-tahun selanjutnya, ya sayang?',
-    scrapHint: 'your year-two photo lives here'
+    sub: 'terus bersama di tahun kedua dan tahun-tahun selanjutnya, ya sayang?',
+    scrapHint: 'ayoo photobox'
   }
 ];

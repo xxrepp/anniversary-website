@@ -135,9 +135,26 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   cursor: pointer;
   touch-action: none;
   user-select: none; -webkit-user-select: none;
+  transition: opacity .4s ease, filter .4s ease, transform .4s var(--ease-out);
+}
+.gate-orb.is-loading {
+  cursor: wait;
+  pointer-events: none;
+}
+.gate-orb.is-loading .orb-core {
+  filter: brightness(0.85) grayscale(0.2);
+}
+.gate-orb.is-loading .orb-ring.r1 {
+  animation: ring-spin 4s linear infinite;
+}
+.gate-orb.is-loading .orb-ring.r2 {
+  animation: ring-spin 7s linear infinite reverse;
+}
+.gate-orb.is-loading .op-track {
+  stroke: rgba(227, 184, 120, .08);
 }
 .gate-orb:focus-visible { outline: none; }
-.gate-orb:focus-visible .orb-ring.r1 { border-color: rgba(168, 199, 250, .7); }
+.gate-orb:focus-visible .orb-ring.r1 { border-color: rgba(227, 184, 120, .7); }
 
 /* gold progress ring around the orb (SVG) */
 .orb-progress {
@@ -151,7 +168,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   stroke-width: 2.5;
   stroke-linecap: round;
 }
-.op-track { stroke: rgba(168, 199, 250, .12); }
+.op-track { stroke: rgba(227, 184, 120, .15); }
 .op-fill {
   stroke: var(--gold);
   stroke-dasharray: 351.86;         /* 2πr, r=56 */
@@ -161,36 +178,51 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 
 .orb-core {
-  position: absolute; inset: 26%;
+  position: absolute; inset: 24%;
   border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #C9DBFF, var(--blue) 52%, #2E4E9E 88%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #110D08;
   box-shadow:
-    0 0 44px rgba(109, 155, 245, .5),
-    0 0 120px rgba(109, 155, 245, .22),
-    inset 0 -8px 22px rgba(10, 20, 60, .45);
+    0 0 24px rgba(255, 248, 225, .65),
+    0 0 65px rgba(235, 205, 150, .4),
+    0 0 130px rgba(227, 184, 120, .2),
+    inset -6px -6px 18px rgba(40, 30, 18, .6),
+    inset 3px 3px 8px rgba(255, 255, 255, .7);
   animation: orb-breathe 3.4s ease-in-out infinite;
   transition: transform .3s var(--ease-out), box-shadow .3s;
+}
+.orb-core .moon-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  pointer-events: none;
 }
 .gate-orb:active .orb-core,
 .gate-orb.holding .orb-core {
   animation-play-state: paused;
   transform: scale(.94);
   box-shadow:
-    0 0 60px rgba(109, 155, 245, .7),
-    0 0 150px rgba(227, 184, 120, .3),
-    inset 0 -8px 22px rgba(10, 20, 60, .45);
+    0 0 45px rgba(255, 248, 225, .9),
+    0 0 95px rgba(235, 205, 150, .6),
+    0 0 160px rgba(227, 184, 120, .38),
+    inset -6px -6px 18px rgba(40, 30, 18, .6),
+    inset 3px 3px 8px rgba(255, 255, 255, .9);
 }
 .orb-ring {
   position: absolute; inset: 0;
   border-radius: 50%;
-  border: 1px solid rgba(168, 199, 250, .28);
+  border: 1px solid rgba(227, 184, 120, .25);
   transition: border-color .3s;
 }
 .orb-ring.r1 { animation: ring-spin 14s linear infinite; }
 .orb-ring.r2 {
   inset: 10%;
   border-style: dashed;
-  border-color: rgba(168, 199, 250, .18);
+  border-color: rgba(227, 184, 120, .18);
   animation: ring-spin 22s linear infinite reverse;
 }
 .orb-ring::after {
@@ -213,9 +245,15 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .gate-line {
   font-size: .92rem; font-weight: 500;
   letter-spacing: .18em; text-transform: uppercase;
-  color: var(--blue-soft);
+  color: var(--ink-soft);
   animation: gate-sway 2.6s ease-in-out infinite;
-  transition: opacity .3s;
+  transition: opacity .3s, color .3s;
+}
+.gate-line.is-loading {
+  opacity: .5;
+  font-size: .84rem;
+  letter-spacing: .14em;
+  color: var(--ink-faint);
 }
 .gate-orb.holding ~ .gate-line { opacity: .35; }
 @keyframes gate-sway {
@@ -837,11 +875,9 @@ body.unlocked .side-label { opacity: .8; }
 .letter-body.reveal-letter p {
   opacity: 0; transform: translateY(16px);
   animation: letter-line .8s var(--ease-out) forwards;
+  animation-delay: calc(var(--idx, 0) * .2s);
 }
-.letter-body.reveal-letter p:nth-child(2) { animation-delay: .25s; }
-.letter-body.reveal-letter p:nth-child(3) { animation-delay: .5s; }
 @keyframes letter-line { to { opacity: 1; transform: none; } }
-
 /* ---------------- studio page ---------------- */
 
 .studio-cta {

@@ -34,10 +34,116 @@
         </svg>
         <span class="orb-ring r1"></span>
         <span class="orb-ring r2"></span>
-        <span class="orb-core"></span>
+        <span class="orb-core">
+          <svg class="moon-svg" viewBox="0 0 200 200" width="100%" height="100%" aria-hidden="true">
+            <defs>
+              <filter id="moonNoise" x="-10%" y="-10%" width="120%" height="120%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="5" result="noise" seed="42"/>
+                <feColorMatrix type="matrix" values="
+                  0.33 0.33 0.33 0 0
+                  0.33 0.33 0.33 0 0
+                  0.33 0.33 0.33 0 0
+                  0    0    0    1 0" in="noise" result="grayNoise"/>
+                <feComponentTransfer in="grayNoise" result="contrastNoise">
+                  <feFuncR type="linear" slope="1.3" intercept="-0.15"/>
+                  <feFuncG type="linear" slope="1.3" intercept="-0.15"/>
+                  <feFuncB type="linear" slope="1.3" intercept="-0.15"/>
+                </feComponentTransfer>
+                <feBlend mode="multiply" in="SourceGraphic" in2="contrastNoise" result="textured"/>
+              </filter>
+              <radialGradient id="moonShading" cx="44%" cy="40%" r="58%">
+                <stop offset="0%" stop-color="#FFFDF9"/>
+                <stop offset="35%" stop-color="#F6F0E4"/>
+                <stop offset="65%" stop-color="#DFD2BD"/>
+                <stop offset="85%" stop-color="#B5A48B"/>
+                <stop offset="98%" stop-color="#7C6B53"/>
+                <stop offset="100%" stop-color="#4F4130"/>
+              </radialGradient>
+              <radialGradient id="sphereDepth" cx="48%" cy="46%" r="50%">
+                <stop offset="65%" stop-color="#000" stop-opacity="0"/>
+                <stop offset="86%" stop-color="#241B10" stop-opacity="0.28"/>
+                <stop offset="96%" stop-color="#0F0A05" stop-opacity="0.6"/>
+                <stop offset="100%" stop-color="#000000" stop-opacity="0.85"/>
+              </radialGradient>
+              <clipPath id="moonClip">
+                <circle cx="100" cy="100" r="100"/>
+              </clipPath>
+            </defs>
+            <g clip-path="url(#moonClip)">
+              <!-- Base lunar sphere with micro-texture -->
+              <circle cx="100" cy="100" r="100" fill="url(#moonShading)" filter="url(#moonNoise)"/>
+
+              <!-- Maria: basalt lunar seas -->
+              <!-- Oceanus Procellarum -->
+              <path d="M 26,56 Q 58,42 66,60 Q 48,92 54,124 Q 38,126 28,102 Q 22,76 26,56 Z" fill="#605342" opacity="0.55" filter="blur(6px)"/>
+              <!-- Mare Imbrium -->
+              <ellipse cx="64" cy="56" rx="24" ry="20" fill="#504332" opacity="0.6" filter="blur(7px)"/>
+              <!-- Sinus Iridum -->
+              <ellipse cx="48" cy="40" rx="9" ry="7" fill="#594B3A" opacity="0.5" filter="blur(3px)"/>
+              <!-- Mare Serenitatis -->
+              <circle cx="120" cy="64" r="18" fill="#544737" opacity="0.58" filter="blur(5px)"/>
+              <!-- Mare Tranquillitatis -->
+              <ellipse cx="128" cy="94" rx="22" ry="17" fill="#4E4132" opacity="0.62" filter="blur(6px)"/>
+              <!-- Mare Crisium -->
+              <ellipse cx="164" cy="68" rx="13" ry="9" fill="#443728" opacity="0.68" filter="blur(3px)"/>
+              <!-- Mare Fecunditatis & Mare Nectaris -->
+              <ellipse cx="144" cy="126" rx="18" ry="22" fill="#554838" opacity="0.54" filter="blur(6px)"/>
+              <ellipse cx="118" cy="124" rx="12" ry="10" fill="#5C4F3E" opacity="0.5" filter="blur(4px)"/>
+              <!-- Mare Nubium & Humorum -->
+              <ellipse cx="74" cy="134" rx="20" ry="15" fill="#524535" opacity="0.56" filter="blur(6px)"/>
+              <circle cx="48" cy="120" r="11" fill="#564939" opacity="0.52" filter="blur(4px)"/>
+              <!-- Mare Frigoris -->
+              <path d="M 40,24 Q 100,16 150,28 Q 100,32 40,24 Z" fill="#5C4E3D" opacity="0.48" filter="blur(4px)"/>
+
+              <!-- Craters and Ray Systems -->
+              <!-- Tycho ray system -->
+              <g opacity="0.95">
+                <path d="M 100,168 Q 68,128 35,92" stroke="#FFFCEB" stroke-width="1.8" opacity="0.32" filter="blur(1px)"/>
+                <path d="M 100,168 Q 120,118 138,72" stroke="#FFFCEB" stroke-width="1.8" opacity="0.35" filter="blur(1px)"/>
+                <path d="M 100,168 Q 138,142 166,116" stroke="#FFFCEB" stroke-width="1.5" opacity="0.28" filter="blur(1px)"/>
+                <path d="M 100,168 Q 85,180 72,192" stroke="#FFFCEB" stroke-width="1.6" opacity="0.32" filter="blur(1px)"/>
+                <path d="M 100,168 Q 124,178 148,184" stroke="#FFFCEB" stroke-width="1.4" opacity="0.28" filter="blur(1px)"/>
+                <path d="M 100,168 Q 58,154 22,138" stroke="#FFFCEB" stroke-width="1.6" opacity="0.3" filter="blur(1px)"/>
+                <path d="M 100,168 Q 104,100 108,32" stroke="#FFFCEB" stroke-width="1.2" opacity="0.24" filter="blur(1.2px)"/>
+                <!-- Tycho center crater -->
+                <circle cx="100" cy="168" r="3.2" fill="#FFFFFF"/>
+                <circle cx="100" cy="168" r="7.5" fill="#FFFCE6" opacity="0.55" filter="blur(2px)"/>
+              </g>
+
+              <!-- Copernicus crater -->
+              <g>
+                <circle cx="75" cy="87" r="11" fill="#FFFDF0" opacity="0.4" filter="blur(3px)"/>
+                <circle cx="75" cy="87" r="4.5" fill="#5E4E3B" opacity="0.45"/>
+                <circle cx="75" cy="87" r="2.2" fill="#FFFFFF"/>
+              </g>
+
+              <!-- Kepler crater -->
+              <g>
+                <circle cx="47" cy="83" r="6" fill="#FFFDF0" opacity="0.4" filter="blur(2px)"/>
+                <circle cx="47" cy="83" r="1.6" fill="#FFFFFF"/>
+              </g>
+
+              <!-- Aristarchus -->
+              <circle cx="43" cy="58" r="2.4" fill="#FFFFFF" opacity="0.98"/>
+              <circle cx="43" cy="58" r="5.5" fill="#FFFEE8" opacity="0.5" filter="blur(1.5px)"/>
+
+              <!-- Plato crater -->
+              <ellipse cx="78" cy="32" rx="4.5" ry="2.8" fill="#3D3020" opacity="0.75" filter="blur(0.8px)"/>
+
+              <!-- Southern highlands terrain -->
+              <ellipse cx="100" cy="178" rx="55" ry="24" fill="#FFFDF5" opacity="0.18" filter="blur(8px)"/>
+
+              <!-- 3D spherical depth falloff -->
+              <circle cx="100" cy="100" r="100" fill="url(#sphereDepth)"/>
+
+              <!-- Crisp rim ring -->
+              <circle cx="100" cy="100" r="99.5" fill="none" stroke="rgba(255, 250, 235, 0.45)" stroke-width="0.8"/>
+            </g>
+          </svg>
+        </span>
       </button>
-      <p class="gate-line">press &amp; hold the moon</p>
-      <p class="gate-note">it opens with music · sound on</p>
+      <p class="gate-line" id="gateLine">press &amp; hold the moon</p>
+      <p class="gate-note">ada musiknya - pake speaker ya sayang</p>
     </div>
   </div>
 
