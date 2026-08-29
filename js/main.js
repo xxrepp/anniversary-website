@@ -144,7 +144,17 @@
       } else if (p.body) {
         paras = String(p.body).split(/\n\n+/);
       }
-      const parasHtml = paras.map((t, idx) => `<p style="--idx:${idx}">${esc(t)}</p>`).join('');
+      const parasHtml = paras.map((t, idx) => {
+        if (typeof t === 'object' && t !== null && t.quote) {
+          return `<blockquote class="letter-quote" style="--idx:${idx}">${esc(t.quote)}</blockquote>`;
+        }
+        const str = String(t).trim();
+        if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'")) || (str.startsWith('“') && str.endsWith('”'))) {
+          const unquoted = str.replace(/^["'“]|["'”]$/g, '').trim();
+          return `<blockquote class="letter-quote" style="--idx:${idx}">“${esc(unquoted)}”</blockquote>`;
+        }
+        return `<p style="--idx:${idx}">${esc(t)}</p>`;
+      }).join('');
       const signHtml = p.sign ? `<p class="sign" style="--idx:${paras.length}">${esc(p.sign)}</p>` : '';
       return `
       <section class="chapter">

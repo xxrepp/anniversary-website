@@ -227,12 +227,12 @@ window.SCRAPBOOK_PAGES = [
       'Halo sayangku🤍',
       'Selamat satu tahun ayang. Terima kasih untuk 365 hari yang sudah kita lalui bersama. Banyak suka dan duka yang kita lalui bersama, banyak moment yang kita lewatin bersama, banyak obrolan yang sudah kita bicarakan, banyak janji yang sudah kita buat, dan satu komitmen yang kita jaga bersama.',
       'Selama satu tahun ini, aku selalu bersyukur setiap harinya bisa ditemani pasangan yang se MasyaAllah kamu.',
-	  'Dan di tahun depan, hubungan kita akan lebih serius lagi. InsyaAllah, di tahun depan kita akan mengusahakan niat baik kita bersama untuk menikah.',
-	  'Aku berdoa perjalanan kita di tahun depan dan tahun-tahun selanjutnya selalu dijaga dan dilancarkan, selalu saling mencintai dan mengusahakan satu sama lain.',
-	  'Tidak banyak yang bisa aku ucapkan di ucapan anniversary kali ini, selain terima kasih atas kehadiran kamu di hidup aku.' ,
-	  "'Kau adalah semua jawaban dari doa yang kupanjatkan, dengan hadirmu di hidupku sudah kumerasa cukup'",
-	  "'Hati ini telah menetapkan engkau sosok yang kan temani, di masa ini, masa nanti, dan masa indah lainnya'",
-	  'I love you more, sayangku, cintaku, satu-tahunku'
+      'Dan di tahun depan, hubungan kita akan lebih serius lagi. InsyaAllah, di tahun depan kita akan mengusahakan niat baik kita bersama untuk menikah.',
+      'Aku berdoa perjalanan kita di tahun depan dan tahun-tahun selanjutnya selalu dijaga dan dilancarkan, selalu saling mencintai dan mengusahakan satu sama lain.',
+      'Tidak banyak yang bisa aku ucapkan di ucapan anniversary kali ini, selain terima kasih atas kehadiran kamu di hidup aku.',
+      '“Kau adalah semua jawaban dari doa yang kupanjatkan, dengan hadirmu di hidupku sudah kumerasa cukup”',
+      '“Hati ini telah menetapkan engkau sosok yang kan temani, di masa ini, masa nanti, dan masa indah lainnya”',
+      'I love you more, sayangku, cintaku, satu-tahunku'
     ],
     sign: '— always, Aldi Kurniawan'
   },
