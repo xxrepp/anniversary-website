@@ -230,7 +230,7 @@ window.SCRAPBOOK_PAGES = [
       'Dan di tahun depan, hubungan kita akan lebih serius lagi. InsyaAllah, di tahun depan kita akan mengusahakan niat baik kita bersama untuk menikah.',
       'Aku berdoa perjalanan kita di tahun depan dan tahun-tahun selanjutnya selalu dijaga dan dilancarkan, selalu saling mencintai dan mengusahakan satu sama lain.',
       'Tidak banyak yang bisa aku ucapkan di ucapan anniversary kali ini, selain terima kasih atas kehadiran kamu di hidup aku.',
-      '“Kau adalah semua jawaban dari doa yang kupanjatkan, dengan hadirmu di hidupku sudah kumerasa cukup”',
+      '“Kau adalah semua jawaban dari doa yang kupanjatkan, dengan hadirmu di hidupku sudah ku merasa cukup”',
       '“Hati ini telah menetapkan engkau sosok yang kan temani, di masa ini, masa nanti, dan masa indah lainnya”',
       'I love you more, sayangku, cintaku, satu-tahunku, Betha Octariana ku'
     ],
