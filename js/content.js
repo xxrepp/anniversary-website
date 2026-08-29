@@ -232,7 +232,7 @@ window.SCRAPBOOK_PAGES = [
       'Tidak banyak yang bisa aku ucapkan di ucapan anniversary kali ini, selain terima kasih atas kehadiran kamu di hidup aku.',
       '“Kau adalah semua jawaban dari doa yang kupanjatkan, dengan hadirmu di hidupku sudah kumerasa cukup”',
       '“Hati ini telah menetapkan engkau sosok yang kan temani, di masa ini, masa nanti, dan masa indah lainnya”',
-      'I love you more, sayangku, cintaku, satu-tahunku'
+      'I love you more, sayangku, cintaku, satu-tahunku, Betha Octariana ku'
     ],
     sign: '— always, Aldi Kurniawan'
   },
