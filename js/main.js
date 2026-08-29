@@ -190,8 +190,14 @@
         <p class="chapter-num reveal">finale</p>
         <h2 class="finale-title reveal d1">${esc(p.title)}</h2>
         <p class="finale-sub reveal d2">${esc(p.sub)}</p>
-        <div class="finale-photo empty reveal d3" id="finalePhoto">
-          <div class="ph">${esc(p.scrapHint)}</div>
+        <div class="finale-photo-wrap reveal d3">
+          <div class="finale-photo empty" id="finalePhoto">
+            <div class="ph">${esc(p.scrapHint)}</div>
+          </div>
+          <div class="finale-actions" id="finaleActions" hidden>
+            <button class="btn ghost btn-sm" id="finaleRetakeBtn" data-open-studio>retake / change</button>
+            <button class="btn ghost btn-sm" id="finaleResetBtn">remove</button>
+          </div>
         </div>
         <p class="finale-foot reveal d3">made with love · volume i</p>
       </section>`;
@@ -882,22 +888,29 @@
     });
   }
 
-  /* ============================================================
-     8 · FINALE PHOTO (studio result pinned at the end)
-     ============================================================ */
-
-  const FRAME_KEY = 'anniv.yearTwoFrame';
-
   function refreshFinale() {
     const slot = $('#finalePhoto');
+    const actions = $('#finaleActions');
     if (!slot) return;
     const data = localStorage.getItem(FRAME_KEY);
-    if (!data) return;
+    if (!data) {
+      slot.classList.add('empty');
+      slot.innerHTML = `<div class="ph">open the studio above to pin your photo here</div>`;
+      if (actions) actions.hidden = true;
+      return;
+    }
     slot.classList.remove('empty');
     slot.innerHTML = `<img src="${data}" alt="the first photo of year two">`;
+    if (actions) actions.hidden = false;
   }
+
+  document.addEventListener('click', e => {
+    if (e.target && e.target.id === 'finaleResetBtn') {
+      window.dispatchEvent(new CustomEvent('resetYearTwoStudio'));
+      refreshFinale();
+    }
+  });
 
   window.addEventListener('yearTwoPhotoSaved', refreshFinale);
   refreshFinale();
-
 })();

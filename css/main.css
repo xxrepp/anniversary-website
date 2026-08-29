@@ -976,12 +976,22 @@ body.unlocked .side-label { opacity: .8; }
   font-weight: 300; font-size: 1.1rem;
   padding: 20px; text-align: center;
 }
+.finale-actions {
+  margin-top: 1.4rem;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.finale-actions .btn-sm {
+  padding: .5rem 1.1rem;
+  font-size: .78rem;
+  letter-spacing: .12em;
+}
 .finale-foot {
-  margin-top: 4rem;
+  margin-top: 3.2rem;
   font-size: .7rem; letter-spacing: .3em; text-transform: uppercase;
   color: var(--ink-faint);
 }
-
 /* ============================================================
    OVERLAYS — lightbox + studio (restyled, same ids as original)
    ============================================================ */

@@ -68,19 +68,51 @@
       enterEdit();
       return;
     }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      $('takePhotoBtn').hidden = true;
+      $('sourceNote').textContent = "Camera is not supported on this browser or requires a secure HTTPS connection.";
+      return;
+    }
+
+    const constraintSets = [
+      { video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1920 } }, audio: false },
+      { video: { facingMode: 'user' }, audio: false },
+      { video: true, audio: false }
+    ];
+
+    let lastErr = null;
+    for (const constraints of constraintSets) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (stream) break;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+
+    if (!stream) {
+      stopStream();
+      let msg = "Camera couldn't be accessed. Please check permissions or select from gallery.";
+      if (lastErr && (lastErr.name === 'NotAllowedError' || lastErr.name === 'PermissionDeniedError')) {
+        msg = "Camera permission was denied. Please allow camera access in your browser settings.";
+      } else if (lastErr && lastErr.name === 'NotFoundError') {
+        msg = "No camera found on this device. Please select photos from gallery.";
+      } else if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        msg = "Camera requires HTTPS. Please access this website over HTTPS.";
+      }
+      $('sourceNote').textContent = msg;
+      showStep('source');
+      return;
+    }
+
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1920 } },
-        audio: false
-      });
       video.srcObject = stream;
       await video.play().catch(() => {});
       updateCameraCounter();
       showStep('camera');
     } catch (err) {
       stopStream();
-      $('takePhotoBtn').hidden = true;
-      $('sourceNote').textContent = "Camera couldn't be accessed — please select photos from gallery.";
+      $('sourceNote').textContent = "Could not start video stream. Please choose photos from gallery.";
       showStep('source');
     }
   }
@@ -300,6 +332,14 @@
   });
 
   $('changePhotoBtn').addEventListener('click', () => {
+    sources = [];
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(FRAME_KEY);
+    window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
+    $('sourceNote').textContent = '';
+    showStep('source');
+  });
+  window.addEventListener('resetYearTwoStudio', () => {
     sources = [];
     localStorage.removeItem(KEY);
     localStorage.removeItem(FRAME_KEY);
