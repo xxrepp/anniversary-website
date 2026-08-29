@@ -253,9 +253,12 @@
     } catch (err) { /* localStorage quota guard */ }
     persistFrame();
   }
-
   async function persistFrame() {
-    if (!sources.length) return;
+    if (!sources.length) {
+      localStorage.removeItem(FRAME_KEY);
+      window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
+      return;
+    }
     try {
       await E.ensureFonts();
       const maxSide = 900;

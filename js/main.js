@@ -15,11 +15,11 @@
   const $ = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const FRAME_KEY = 'anniv.yearTwoFrame';
 
   const esc = s => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-
   /* ============================================================
      1 · BUILD SECTIONS
      ============================================================ */
@@ -195,7 +195,7 @@
             <div class="ph">${esc(p.scrapHint)}</div>
           </div>
           <div class="finale-actions" id="finaleActions" hidden>
-            <button class="btn ghost btn-sm" id="finaleRetakeBtn" data-open-studio>retake / change</button>
+            <button class="btn ghost btn-sm" id="finaleRetakeBtn" data-open-studio>retake</button>
             <button class="btn ghost btn-sm" id="finaleResetBtn">remove</button>
           </div>
         </div>
@@ -887,7 +887,6 @@
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); breakSeal(); }
     });
   }
-
   function refreshFinale() {
     const slot = $('#finalePhoto');
     const actions = $('#finaleActions');
@@ -895,17 +894,28 @@
     const data = localStorage.getItem(FRAME_KEY);
     if (!data) {
       slot.classList.add('empty');
-      slot.innerHTML = `<div class="ph">open the studio above to pin your photo here</div>`;
-      if (actions) actions.hidden = true;
+      const backcoverCfg = (pages || []).find(p => p.type === 'backcover');
+      const hintText = (backcoverCfg && backcoverCfg.scrapHint) || 'ayoo photobox';
+      slot.innerHTML = `<div class="ph">${esc(hintText)}</div>`;
+      if (actions) {
+        actions.hidden = true;
+        actions.style.display = 'none';
+      }
       return;
     }
     slot.classList.remove('empty');
     slot.innerHTML = `<img src="${data}" alt="the first photo of year two">`;
-    if (actions) actions.hidden = false;
+    if (actions) {
+      actions.hidden = false;
+      actions.style.display = 'flex';
+    }
   }
 
   document.addEventListener('click', e => {
-    if (e.target && e.target.id === 'finaleResetBtn') {
+    const btn = e.target && e.target.closest('#finaleResetBtn');
+    if (btn) {
+      localStorage.removeItem(FRAME_KEY);
+      localStorage.removeItem('anniv.yearTwoPhotos');
       window.dispatchEvent(new CustomEvent('resetYearTwoStudio'));
       refreshFinale();
     }
