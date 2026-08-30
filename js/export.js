@@ -1,10 +1,10 @@
 /* ============================================================
    export.js — Photobox Polaroid Compositor (9:16 IG Story).
-   Aesthetic 2x2 Photobox Polaroid card in full 9:16 Instagram Story format:
+   Aesthetic Photobox Polaroid card in full 9:16 Instagram Story format:
      · Dimension: 1080 x 1920 (Native 9:16)
      · Deep midnight navy background with subtle grain & starfield glow
      · Seamless edges (no transparent border / white outline)
-     · Clean 2x2 grid for photos (1-4 photos) with film borders
+     · Dynamic harmonious grid for photos (1-10 photos) with film borders
      · Minimal celestial theme artwork: subtle glowing crescent moon,
        sparkling stars & constellations, elegant Fraunces serif typography
      · High-res export for download & responsive pinned preview
@@ -71,39 +71,50 @@
     { x: 0.50, y: 0.03, r: 1.1, alpha: 0.4 }
   ];
 
+  // Dynamic grid layouts for 1 to 10 photos
+  const LAYOUT_CONFIGS = {
+    1: [1],
+    2: [1, 1],
+    3: [2, 1],
+    4: [2, 2],
+    5: [2, 3],
+    6: [2, 2, 2],
+    7: [2, 3, 2],
+    8: [2, 2, 2, 2],
+    9: [3, 3, 3],
+    10: [2, 3, 3, 2]
+  };
+
   function getGridSlots(count, gridRect) {
     const { x, y, w, h } = gridRect;
-    const gap = Math.round(w * 0.028); // clean gap
-    const n = Math.max(1, Math.min(4, count || 1));
+    const n = Math.max(1, Math.min(10, count || 1));
+    const rowCounts = LAYOUT_CONFIGS[n] || [1];
+    const rows = rowCounts.length;
 
-    if (n === 1) {
-      return [{ x, y, w, h }];
+    // Scale gap according to number of rows
+    const gap = rows <= 2 ? Math.round(w * 0.026) : (rows <= 3 ? Math.round(w * 0.020) : Math.round(w * 0.016));
+    const cellH = (h - (rows - 1) * gap) / rows;
+    const slots = [];
+
+    let currY = y;
+    for (let r = 0; r < rows; r++) {
+      const cols = rowCounts[r];
+      const cellW = (w - (cols - 1) * gap) / cols;
+      const rowW = cols * cellW + (cols - 1) * gap;
+      const startX = x + (w - rowW) / 2;
+
+      for (let c = 0; c < cols; c++) {
+        slots.push({
+          x: Math.round(startX + c * (cellW + gap)),
+          y: Math.round(currY),
+          w: Math.round(cellW),
+          h: Math.round(cellH)
+        });
+      }
+      currY += cellH + gap;
     }
-    if (n === 2) {
-      const cellH = (h - gap) / 2;
-      return [
-        { x, y: y, w, h: cellH },
-        { x, y: y + cellH + gap, w, h: cellH }
-      ];
-    }
-    if (n === 3) {
-      const cellW = (w - gap) / 2;
-      const cellH = (h - gap) / 2;
-      return [
-        { x, y: y, w: cellW, h: cellH },
-        { x: x + cellW + gap, y: y, w: cellW, h: cellH },
-        { x: x + (w - cellW) / 2, y: y + cellH + gap, w: cellW, h: cellH }
-      ];
-    }
-    // n === 4: Classic 2x2 grid
-    const cellW = (w - gap) / 2;
-    const cellH = (h - gap) / 2;
-    return [
-      { x, y, w: cellW, h: cellH },
-      { x: x + cellW + gap, y, w: cellW, h: cellH },
-      { x, y: y + cellH + gap, w: cellW, h: cellH },
-      { x: x + cellW + gap, y: y + cellH + gap, w: cellW, h: cellH }
-    ];
+
+    return slots;
   }
 
   function drawSparkle(ctx, cx, cy, size, color) {
@@ -223,7 +234,7 @@
 
   function renderComposite(canvas, sources) {
     const imgs = Array.isArray(sources) ? sources.filter(Boolean) : (sources ? [sources] : []);
-    const count = Math.min(4, Math.max(1, imgs.length));
+    const count = Math.min(10, Math.max(1, imgs.length));
 
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
@@ -325,7 +336,7 @@
       h: gridH
     };
 
-    const photoRadius = 18 * scale;
+    const photoRadius = Math.max(8 * scale, (count <= 4 ? 18 : (count <= 7 ? 14 : 10)) * scale);
     const slots = getGridSlots(count, gridRect);
 
     for (let i = 0; i < slots.length; i++) {

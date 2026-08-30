@@ -1,7 +1,7 @@
 /* ============================================================
    studio.js — Photobox Polaroid Studio (Multi-photo).
-   Allows snapping up to 4 photos via camera or selecting multiple
-   photos from the gallery, compositing them into a 2x2 Photobox Polaroid.
+   Allows snapping up to 10 photos via camera or selecting multiple
+   photos from the gallery, compositing them into a Photobox Polaroid.
    ============================================================ */
 (function () {
   'use strict';
@@ -18,9 +18,10 @@
   const KEY = 'anniv.yearTwoPhotos';
   const FRAME_KEY = 'anniv.yearTwoFrame';
 
-  let stream = null;
-  let sources = []; // Array of Image or Canvas objects (max 4)
+  const MAX_PHOTOS = 10;
 
+  let stream = null;
+  let sources = []; // Array of Image or Canvas objects (max 10)
   const camSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   if (!camSupported) $('takePhotoBtn').hidden = true;
 
@@ -59,12 +60,12 @@
     const counter = $('cameraCounter');
     const doneBtn = $('cameraDone');
     const current = sources.length + 1;
-    if (counter) counter.textContent = `photo ${Math.min(4, current)} of 4`;
+    if (counter) counter.textContent = `photo ${Math.min(MAX_PHOTOS, current)} of ${MAX_PHOTOS}`;
     if (doneBtn) doneBtn.hidden = sources.length === 0;
   }
 
   async function startCamera() {
-    if (sources.length >= 4) {
+    if (sources.length >= MAX_PHOTOS) {
       enterEdit();
       return;
     }
@@ -118,7 +119,7 @@
   }
 
   function shutter() {
-    if (!video.videoWidth || sources.length >= 4) return;
+    if (!video.videoWidth || sources.length >= MAX_PHOTOS) return;
     const c = document.createElement('canvas');
     c.width = video.videoWidth;
     c.height = video.videoHeight;
@@ -128,7 +129,7 @@
     updateCameraCounter();
     persist();
 
-    if (sources.length >= 4) {
+    if (sources.length >= MAX_PHOTOS) {
       stopStream();
       enterEdit();
     }
@@ -138,9 +139,8 @@
 
   function handleFiles(fileList) {
     if (!fileList || !fileList.length) return;
-    const files = Array.from(fileList).slice(0, 4 - sources.length);
+    const files = Array.from(fileList).slice(0, MAX_PHOTOS - sources.length);
     if (!files.length) return;
-
     let loaded = 0;
     files.forEach(file => {
       const url = URL.createObjectURL(file);
@@ -231,7 +231,7 @@
 
     const addBtn = $('addPhotoBtn');
     if (addBtn) {
-      addBtn.style.display = sources.length >= 4 ? 'none' : 'inline-flex';
+      addBtn.style.display = sources.length >= MAX_PHOTOS ? 'none' : 'inline-flex';
     }
   }
 
@@ -285,12 +285,13 @@
 
       let loaded = 0;
       sources = [];
-      list.slice(0, 4).forEach(dataUrl => {
+      const targetList = list.slice(0, MAX_PHOTOS);
+      targetList.forEach(dataUrl => {
         const img = new Image();
         img.onload = () => {
           sources.push(img);
           loaded++;
-          if (loaded === list.length) {
+          if (loaded === targetList.length) {
             if (!studio.hidden && !steps.source.hidden) enterEdit();
             if (!localStorage.getItem(FRAME_KEY)) persistFrame();
             else window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));

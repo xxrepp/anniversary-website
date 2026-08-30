@@ -1157,19 +1157,22 @@ body.unlocked .side-label { opacity: .8; }
 
 .photo-tray {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
-  margin: 1.2rem 0 0.8rem;
+  margin: 1rem 0 0.6rem;
   flex-wrap: wrap;
+  max-width: 680px;
+  margin-inline: auto;
 }
 .tray-item {
   position: relative;
-  width: 58px;
-  height: 58px;
-  border-radius: 10px;
+  width: clamp(44px, 5.5vw, 54px);
+  height: clamp(44px, 5.5vw, 54px);
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--panel-border);
   background: #000;
+  flex-shrink: 0;
 }
 .tray-item img {
   width: 100%;
