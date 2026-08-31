@@ -220,8 +220,18 @@
       </section>
 
       <section id="stepEdit" class="step" hidden>
+        <div class="ratio-selector" role="radiogroup" aria-label="card aspect ratio">
+          <button type="button" class="ratio-btn active" data-ratio="4:5" role="radio" aria-checked="true">
+            <span class="ratio-icon ratio-4-5" aria-hidden="true"></span>
+            <span class="ratio-label">4:5 Polaroid</span>
+          </button>
+          <button type="button" class="ratio-btn" data-ratio="9:16" role="radio" aria-checked="false">
+            <span class="ratio-icon ratio-9-16" aria-hidden="true"></span>
+            <span class="ratio-label">9:16 Story</span>
+          </button>
+        </div>
         <div class="edit-stage" id="editStage">
-          <canvas id="editCanvas" width="10" height="10" aria-label="drag to position your photo"></canvas>
+          <canvas id="editCanvas" width="10" height="10" aria-label="polaroid preview"></canvas>
         </div>
         <div class="photo-tray" id="photoTray"></div>
         <div class="edit-actions">
@@ -231,7 +241,6 @@
         </div>
         <p id="downloadNote" class="tiny-note center" aria-live="polite"></p>
       </section>
-    </div>
   </div>
 
   <audio id="bgMusic" src="background.mp3" loop preload="auto" playsinline></audio>

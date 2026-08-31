@@ -1,7 +1,8 @@
 /* ============================================================
-   export.js — Photobox Polaroid Compositor (9:16 IG Story).
-   Aesthetic Photobox Polaroid card in full 9:16 Instagram Story format:
-     · Dimension: 1080 x 1920 (Native 9:16)
+   export.js — Photobox Polaroid Compositor (9:16 IG Story & 4:5 Portrait).
+   Aesthetic Photobox Polaroid card in customizable formats:
+     · 9:16 Story: 1080 x 1920
+     · 4:5 Portrait / Feed: 1080 x 1350
      · Deep midnight navy background with subtle grain & starfield glow
      · Seamless edges (no transparent border / white outline)
      · Dynamic harmonious grid for photos (1-10 photos) with film borders
@@ -12,10 +13,15 @@
 (function () {
   'use strict';
 
-  // Base canvas dimension: 9:16 Story format
-  const CARD_WIDTH = 1080;
-  const CARD_HEIGHT = 1920;
+  // Formats definition
+  const FORMATS = {
+    '9:16': { width: 1080, height: 1920, label: '9:16 Story' },
+    '4:5':  { width: 1080, height: 1350, label: '4:5 Portrait' }
+  };
 
+  // Default canvas dimension (9:16 Story format)
+  const CARD_WIDTH = FORMATS['9:16'].width;
+  const CARD_HEIGHT = FORMATS['9:16'].height;
   const COPY = {
     album: 'Museum of Us',
     big1: 'Year Two',
@@ -232,14 +238,16 @@
     ctx.restore();
   }
 
-  function renderComposite(canvas, sources) {
+  function renderComposite(canvas, sources, formatKey) {
     const imgs = Array.isArray(sources) ? sources.filter(Boolean) : (sources ? [sources] : []);
     const count = Math.min(10, Math.max(1, imgs.length));
 
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
     const H = canvas.height;
-    const scale = W / CARD_WIDTH;
+    const isFourFive = formatKey === '4:5' || (H / W < 1.5);
+    const baseDim = isFourFive ? FORMATS['4:5'] : FORMATS['9:16'];
+    const scale = W / baseDim.width;
 
     // 1. Full Canvas Background: NO outer margin, NO transparent gap, NO white borders
     ctx.save();
@@ -288,10 +296,10 @@
     ctx.restore();
 
     // 3. Elegant Subtle Frame Inset (Aesthetic Thin Gold/Blue lines)
-    const inset = 36 * scale;
+    const inset = (isFourFive ? 32 : 36) * scale;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(inset, inset, W - inset * 2, H - inset * 2, 28 * scale);
+    ctx.roundRect(inset, inset, W - inset * 2, H - inset * 2, (isFourFive ? 24 : 28) * scale);
     ctx.strokeStyle = PAL.cardBorder;
     ctx.lineWidth = 1.2 * scale;
     ctx.stroke();
@@ -310,23 +318,29 @@
     ctx.restore();
 
     // 4. Header Section: Title & Full Moon
-    const headerY = 124 * scale;
+    const headerY = (isFourFive ? 104 : 124) * scale;
+    const moonRadius = (isFourFive ? 16 : 18) * scale;
+    const moonOffsetY = (isFourFive ? 28 : 32) * scale;
+    const titleOffsetY = (isFourFive ? 42 : 46) * scale;
+    const albumFontSize = (isFourFive ? 36 : 40) * scale;
+
     ctx.save();
     ctx.textAlign = 'center';
 
     // Full glowing moon above header
-    drawFullMoon(ctx, W * 0.5, headerY - 32 * scale, 18 * scale);
+    drawFullMoon(ctx, W * 0.5, headerY - moonOffsetY, moonRadius);
 
     // Main album title
-    ctx.font = `300 ${40 * scale}px ${FONT_DISPLAY}`;
+    ctx.font = `300 ${albumFontSize}px ${FONT_DISPLAY}`;
     ctx.fillStyle = PAL.ink;
     ctx.letterSpacing = `${2 * scale}px`;
-    ctx.fillText(COPY.album, W * 0.5, headerY + 46 * scale);
+    ctx.fillText(COPY.album, W * 0.5, headerY + titleOffsetY);
     ctx.restore();
-    // 5. 2x2 Photo Grid Area
-    const gridPadX = 64 * scale;
-    const gridTop = 230 * scale;
-    const footerHeight = 280 * scale;
+
+    // 5. Photo Grid Area
+    const gridPadX = (isFourFive ? 54 : 64) * scale;
+    const gridTop = (isFourFive ? 190 : 230) * scale;
+    const footerHeight = (isFourFive ? 220 : 280) * scale;
     const gridW = W - gridPadX * 2;
     const gridH = H - gridTop - footerHeight;
     const gridRect = {
@@ -336,7 +350,10 @@
       h: gridH
     };
 
-    const photoRadius = Math.max(8 * scale, (count <= 4 ? 18 : (count <= 7 ? 14 : 10)) * scale);
+    const photoRadius = Math.max(
+      (isFourFive ? 6 : 8) * scale,
+      (count <= 4 ? (isFourFive ? 16 : 18) : (count <= 7 ? (isFourFive ? 12 : 14) : (isFourFive ? 9 : 10))) * scale
+    );
     const slots = getGridSlots(count, gridRect);
 
     for (let i = 0; i < slots.length; i++) {
@@ -356,7 +373,7 @@
         ctx.setLineDash([8 * scale, 6 * scale]);
         ctx.stroke();
 
-        ctx.font = `italic 300 ${22 * scale}px ${FONT_DISPLAY}`;
+        ctx.font = `italic 300 ${(isFourFive ? 20 : 22) * scale}px ${FONT_DISPLAY}`;
         ctx.fillStyle = PAL.inkFaint;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -366,47 +383,55 @@
     }
 
     // 6. Photobox Footer: Year Two & Date
-    const footerCenterY = gridTop + gridH + footerHeight / 2 - 8 * scale;
+    const footerCenterY = gridTop + gridH + footerHeight / 2 - (isFourFive ? 6 : 8) * scale;
+    const sparkleDist = (isFourFive ? 135 : 145) * scale;
+    const titleFontSize = (isFourFive ? 46 : 52) * scale;
+    const subFontSize = (isFourFive ? 16 : 18) * scale;
+    const subOffsetY = (isFourFive ? 38 : 44) * scale;
+    const dateFontSize = (isFourFive ? 14 : 15) * scale;
+    const dateOffsetY = (isFourFive ? 72 : 84) * scale;
 
     ctx.save();
     ctx.textAlign = 'center';
 
     // Sparkle star ornaments flanking the title
-    drawSparkle(ctx, W * 0.5 - 145 * scale, footerCenterY - 6 * scale, 9 * scale, PAL.gold);
-    drawSparkle(ctx, W * 0.5 + 145 * scale, footerCenterY - 6 * scale, 9 * scale, PAL.gold);
+    drawSparkle(ctx, W * 0.5 - sparkleDist, footerCenterY - 6 * scale, (isFourFive ? 8 : 9) * scale, PAL.gold);
+    drawSparkle(ctx, W * 0.5 + sparkleDist, footerCenterY - 6 * scale, (isFourFive ? 8 : 9) * scale, PAL.gold);
 
     // Big Script / Serif Title: Year Two
-    ctx.font = `italic 300 ${52 * scale}px ${FONT_DISPLAY}`;
+    ctx.font = `italic 300 ${titleFontSize}px ${FONT_DISPLAY}`;
     ctx.fillStyle = PAL.ink;
     ctx.fillText(COPY.big1, W * 0.5, footerCenterY);
 
     // Subtitle
-    ctx.font = `300 ${18 * scale}px ${FONT_BODY}`;
+    ctx.font = `300 ${subFontSize}px ${FONT_BODY}`;
     ctx.fillStyle = PAL.inkSoft;
     ctx.letterSpacing = `${1 * scale}px`;
-    ctx.fillText(COPY.sub, W * 0.5, footerCenterY + 44 * scale);
+    ctx.fillText(COPY.sub, W * 0.5, footerCenterY + subOffsetY);
 
     // Bottom Date Tag with Infinity Sign (∞)
-    ctx.font = `500 ${15 * scale}px ${FONT_BODY}`;
+    ctx.font = `500 ${dateFontSize}px ${FONT_BODY}`;
     ctx.fillStyle = PAL.gold;
     ctx.letterSpacing = `${3.5 * scale}px`;
-    ctx.fillText(`${COPY.tail} · ∞`, W * 0.5, footerCenterY + 84 * scale);
+    ctx.fillText(`${COPY.tail} · ∞`, W * 0.5, footerCenterY + dateOffsetY);
 
     ctx.restore();
   }
 
-  async function exportPNG(sources) {
+  async function exportPNG(sources, formatKey = '4:5') {
     await ensureFonts();
+    const format = FORMATS[formatKey] || FORMATS['4:5'];
     const canvas = document.createElement('canvas');
-    canvas.width = CARD_WIDTH;
-    canvas.height = CARD_HEIGHT;
-    renderComposite(canvas, sources);
+    canvas.width = format.width;
+    canvas.height = format.height;
+    renderComposite(canvas, sources, formatKey);
     const blob = await new Promise((resolve, reject) =>
       canvas.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'));
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `museum-of-us-story-${Date.now()}.png`;
+    const fileTag = formatKey === '4:5' ? 'polaroid-4x5' : 'story-9x16';
+    a.download = `museum-of-us-${fileTag}-${Date.now()}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -415,6 +440,7 @@
   }
 
   window.ExportEngine = {
+    FORMATS,
     CARD_WIDTH,
     CARD_HEIGHT,
     ensureFonts,

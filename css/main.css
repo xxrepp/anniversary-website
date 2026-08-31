@@ -1201,6 +1201,54 @@ body.unlocked .side-label { opacity: .8; }
   background: #e74c3c;
   transform: scale(1.1);
 }
+
+.ratio-selector {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(148, 178, 235, 0.08);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  margin: 0 auto 1rem;
+}
+.ratio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  letter-spacing: .02em;
+  border: 1px solid transparent;
+  transition: all .25s var(--ease-out);
+}
+.ratio-btn:hover {
+  color: var(--ink);
+}
+.ratio-btn.active {
+  background: linear-gradient(135deg, rgba(109, 155, 245, 0.28), rgba(143, 123, 240, 0.28));
+  color: var(--ink);
+  border-color: rgba(168, 199, 250, 0.4);
+  box-shadow: 0 4px 14px rgba(109, 155, 245, 0.15);
+}
+.ratio-icon {
+  display: inline-block;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+.ratio-icon.ratio-4-5 {
+  width: 11px;
+  height: 14px;
+}
+.ratio-icon.ratio-9-16 {
+  width: 9px;
+  height: 16px;
+}
 .edit-stage {
   border-radius: 16px; overflow: hidden;
   border: 1px solid var(--panel-border);

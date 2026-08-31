@@ -17,15 +17,16 @@
   const photoTray = $('photoTray');
   const KEY = 'anniv.yearTwoPhotos';
   const FRAME_KEY = 'anniv.yearTwoFrame';
+  const RATIO_KEY = 'anniv.yearTwoRatio';
 
   const MAX_PHOTOS = 10;
-
   let stream = null;
   let sources = []; // Array of Image or Canvas objects (max 10)
   const camSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   if (!camSupported) $('takePhotoBtn').hidden = true;
 
-  /* ---------------- open / close ---------------- */
+  let currentRatio = localStorage.getItem(RATIO_KEY) || '4:5';
+  if (!E.FORMATS || !E.FORMATS[currentRatio]) currentRatio = '4:5';
 
   function showStep(name) {
     Object.entries(steps).forEach(([k, el]) => { el.hidden = k !== name; });
@@ -170,22 +171,49 @@
 
   function enterEdit() {
     showStep('edit');
+    updateRatioButtons();
     sizeCanvas();
     renderTray();
     draw();
+  }
+
+  function updateRatioButtons() {
+    const buttons = studio.querySelectorAll('.ratio-btn');
+    buttons.forEach(btn => {
+      const r = btn.getAttribute('data-ratio');
+      const isActive = r === currentRatio;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    });
+  }
+
+  function setRatio(ratioKey) {
+    if (ratioKey !== '4:5' && ratioKey !== '9:16') return;
+    if (currentRatio === ratioKey) return;
+    currentRatio = ratioKey;
+    try {
+      localStorage.setItem(RATIO_KEY, currentRatio);
+    } catch (e) {}
+    updateRatioButtons();
+    sizeCanvas();
+    draw();
+    persistFrame();
   }
 
   function sizeCanvas() {
     const box = $('editStage');
     const maxW = Math.max(200, box.clientWidth || 360);
     const maxH = Math.min(window.innerHeight * 0.54, 540);
-    const k = Math.min(maxW / E.CARD_WIDTH, maxH / E.CARD_HEIGHT);
+    const format = (E.FORMATS && E.FORMATS[currentRatio]) || { width: 1080, height: 1350 };
+    const cardW = format.width;
+    const cardH = format.height;
+    const k = Math.min(maxW / cardW, maxH / cardH);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    canvas.width = Math.round(E.CARD_WIDTH * k * dpr);
-    canvas.height = Math.round(E.CARD_HEIGHT * k * dpr);
-    canvas.style.width = Math.round(E.CARD_WIDTH * k) + 'px';
-    canvas.style.height = Math.round(E.CARD_HEIGHT * k) + 'px';
+    canvas.width = Math.round(cardW * k * dpr);
+    canvas.height = Math.round(cardH * k * dpr);
+    canvas.style.width = Math.round(cardW * k) + 'px';
+    canvas.style.height = Math.round(cardH * k) + 'px';
   }
 
   let rafPending = false;
@@ -194,7 +222,7 @@
     rafPending = true;
     requestAnimationFrame(() => {
       rafPending = false;
-      E.renderComposite(canvas, sources);
+      E.renderComposite(canvas, sources, currentRatio);
     });
   }
 
@@ -261,12 +289,15 @@
     }
     try {
       await E.ensureFonts();
+      const format = (E.FORMATS && E.FORMATS[currentRatio]) || { width: 1080, height: 1350 };
+      const cardW = format.width;
+      const cardH = format.height;
       const maxSide = 900;
-      const k = Math.min(1, maxSide / Math.max(E.CARD_WIDTH, E.CARD_HEIGHT));
+      const k = Math.min(1, maxSide / Math.max(cardW, cardH));
       const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(E.CARD_WIDTH * k));
-      c.height = Math.max(1, Math.round(E.CARD_HEIGHT * k));
-      E.renderComposite(c, sources);
+      c.width = Math.max(1, Math.round(cardW * k));
+      c.height = Math.max(1, Math.round(cardH * k));
+      E.renderComposite(c, sources, currentRatio);
       localStorage.setItem(FRAME_KEY, c.toDataURL('image/jpeg', 0.85));
       window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
     } catch (err) {
@@ -275,7 +306,6 @@
       } catch (e2) {}
     }
   }
-
   function restore() {
     try {
       const raw = localStorage.getItem(KEY);
@@ -352,6 +382,14 @@
     showStep('source');
   });
 
+  studio.addEventListener('click', e => {
+    const ratioBtn = e.target.closest('.ratio-btn');
+    if (ratioBtn) {
+      const r = ratioBtn.getAttribute('data-ratio');
+      if (r) setRatio(r);
+    }
+  });
+
   window.addEventListener('resize', () => {
     if (!studio.hidden && !steps.edit.hidden) { sizeCanvas(); draw(); }
   });
@@ -363,7 +401,7 @@
     btn.disabled = true;
     note.textContent = 'printing your polaroid…';
     try {
-      await E.exportPNG(sources);
+      await E.exportPNG(sources, currentRatio);
       await persistFrame();
       note.textContent = 'saved! check your downloads & see it pinned at the end.';
     } catch (err) {
