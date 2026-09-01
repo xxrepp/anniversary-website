@@ -192,18 +192,39 @@
     ctx.restore();
   }
 
-  // Draw one image with cover crop inside a given slot with rounded corners
-  function drawCoverImage(ctx, img, slot, radius, scale) {
+  // Draw one image with cover crop inside a given slot with rounded corners + pan & zoom offsets
+  function drawCoverImage(ctx, img, slot, radius, scale, transform) {
     if (!img) return;
     const { x, y, w, h } = slot;
     const imgW = img.width || img.videoWidth || 1;
     const imgH = img.height || img.videoHeight || 1;
 
-    const imgScale = Math.max(w / imgW, h / imgH);
-    const sw = w / imgScale;
-    const sh = h / imgScale;
-    const sx = (imgW - sw) / 2;
-    const sy = (imgH - sh) / 2;
+    // Parse transform (pan offsetX, offsetY in normalized [-1, 1] range, zoom >= 1)
+    const zoom = (transform && typeof transform.zoom === 'number' && transform.zoom >= 1) ? transform.zoom : 1.0;
+    const offsetX = (transform && typeof transform.offsetX === 'number') ? transform.offsetX : 0.0;
+    const offsetY = (transform && typeof transform.offsetY === 'number') ? transform.offsetY : 0.0;
+
+    const baseScale = Math.max(w / imgW, h / imgH);
+    const finalScale = baseScale * zoom;
+    const sw = w / finalScale;
+    const sh = h / finalScale;
+
+    // Base centered crop coordinates
+    const baseSx = (imgW - sw) / 2;
+    const baseSy = (imgH - sh) / 2;
+
+    // Max available slack on left/right and top/bottom to pan into
+    const maxSlackX = Math.max(0, (imgW - sw) / 2);
+    const maxSlackY = Math.max(0, (imgH - sh) / 2);
+
+    // Positive offsetX means dragging right -> showing more left part (or vice versa)
+    // Standard pan: panning offset shifts source window in opposite direction:
+    let sx = baseSx - (offsetX * maxSlackX);
+    let sy = baseSy - (offsetY * maxSlackY);
+
+    // Clamp inside source image bounds
+    sx = Math.max(0, Math.min(imgW - sw, sx));
+    sy = Math.max(0, Math.min(imgH - sh, sy));
 
     ctx.save();
     ctx.beginPath();
@@ -238,17 +259,39 @@
     ctx.restore();
   }
 
-  function renderComposite(canvas, sources, formatKey) {
-    const imgs = Array.isArray(sources) ? sources.filter(Boolean) : (sources ? [sources] : []);
-    const count = Math.min(10, Math.max(1, imgs.length));
-
-    const ctx = canvas.getContext('2d');
+  function getRenderMetrics(canvas, count, formatKey) {
     const W = canvas.width;
     const H = canvas.height;
     const isFourFive = formatKey === '4:5' || (H / W < 1.5);
     const baseDim = isFourFive ? FORMATS['4:5'] : FORMATS['9:16'];
     const scale = W / baseDim.width;
 
+    const gridPadX = (isFourFive ? 54 : 64) * scale;
+    const gridTop = (isFourFive ? 190 : 230) * scale;
+    const footerHeight = (isFourFive ? 220 : 280) * scale;
+    const gridW = W - gridPadX * 2;
+    const gridH = H - gridTop - footerHeight;
+    const gridRect = { x: gridPadX, y: gridTop, w: gridW, h: gridH };
+
+    const photoRadius = Math.max(
+      (isFourFive ? 6 : 8) * scale,
+      (count <= 4 ? (isFourFive ? 16 : 18) : (count <= 7 ? (isFourFive ? 12 : 14) : (isFourFive ? 9 : 10))) * scale
+    );
+    const slots = getGridSlots(count, gridRect);
+    return { W, H, isFourFive, scale, gridRect, photoRadius, slots };
+  }
+
+  function renderComposite(canvas, sources, formatKey, options = {}) {
+    const imgs = Array.isArray(sources) ? sources.filter(Boolean) : (sources ? [sources] : []);
+    const count = Math.min(10, Math.max(1, imgs.length));
+
+    const ctx = canvas.getContext('2d');
+    const metrics = getRenderMetrics(canvas, count, formatKey);
+    const { W, H, isFourFive, scale, photoRadius, slots, gridRect } = metrics;
+    const footerHeight = (isFourFive ? 220 : 280) * scale;
+    const gridTop = gridRect.y;
+    const gridH = gridRect.h;
+    const transforms = options.transforms || [];
     // 1. Full Canvas Background: NO outer margin, NO transparent gap, NO white borders
     ctx.save();
     const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
@@ -338,28 +381,11 @@
     ctx.restore();
 
     // 5. Photo Grid Area
-    const gridPadX = (isFourFive ? 54 : 64) * scale;
-    const gridTop = (isFourFive ? 190 : 230) * scale;
-    const footerHeight = (isFourFive ? 220 : 280) * scale;
-    const gridW = W - gridPadX * 2;
-    const gridH = H - gridTop - footerHeight;
-    const gridRect = {
-      x: gridPadX,
-      y: gridTop,
-      w: gridW,
-      h: gridH
-    };
-
-    const photoRadius = Math.max(
-      (isFourFive ? 6 : 8) * scale,
-      (count <= 4 ? (isFourFive ? 16 : 18) : (count <= 7 ? (isFourFive ? 12 : 14) : (isFourFive ? 9 : 10))) * scale
-    );
-    const slots = getGridSlots(count, gridRect);
-
     for (let i = 0; i < slots.length; i++) {
       const img = imgs[i];
+      const transform = transforms[i] || (img && img._transform) || null;
       if (img) {
-        drawCoverImage(ctx, img, slots[i], photoRadius, scale);
+        drawCoverImage(ctx, img, slots[i], photoRadius, scale, transform);
       } else {
         // Empty slot placeholder
         const slot = slots[i];
@@ -418,13 +444,13 @@
     ctx.restore();
   }
 
-  async function exportPNG(sources, formatKey = '4:5') {
+  async function exportPNG(sources, formatKey = '4:5', options = {}) {
     await ensureFonts();
     const format = FORMATS[formatKey] || FORMATS['4:5'];
     const canvas = document.createElement('canvas');
     canvas.width = format.width;
     canvas.height = format.height;
-    renderComposite(canvas, sources, formatKey);
+    renderComposite(canvas, sources, formatKey, options);
     const blob = await new Promise((resolve, reject) =>
       canvas.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'));
     const url = URL.createObjectURL(blob);
@@ -444,6 +470,8 @@
     CARD_WIDTH,
     CARD_HEIGHT,
     ensureFonts,
+    getGridSlots,
+    getRenderMetrics,
     renderComposite,
     exportPNG
   };

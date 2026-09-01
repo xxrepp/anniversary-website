@@ -16,23 +16,31 @@
   const canvas = $('editCanvas');
   const photoTray = $('photoTray');
   const KEY = 'anniv.yearTwoPhotos';
+  const TRANSFORMS_KEY = 'anniv.yearTwoTransforms';
   const FRAME_KEY = 'anniv.yearTwoFrame';
   const RATIO_KEY = 'anniv.yearTwoRatio';
 
   const MAX_PHOTOS = 10;
   let stream = null;
   let sources = []; // Array of Image or Canvas objects (max 10)
+  let transforms = []; // Array of { offsetX: 0, offsetY: 0, zoom: 1 }
   const camSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   if (!camSupported) $('takePhotoBtn').hidden = true;
 
   let currentRatio = localStorage.getItem(RATIO_KEY) || '4:5';
   if (!E.FORMATS || !E.FORMATS[currentRatio]) currentRatio = '4:5';
 
+  function getTransform(idx) {
+    if (!transforms[idx]) {
+      transforms[idx] = { offsetX: 0, offsetY: 0, zoom: 1 };
+    }
+    return transforms[idx];
+  }
+
   function showStep(name) {
     Object.entries(steps).forEach(([k, el]) => { el.hidden = k !== name; });
     if (name !== 'camera') stopStream();
   }
-
   function open() {
     studio.hidden = false;
     document.body.classList.add('studio-open', 'no-scroll');
@@ -127,6 +135,7 @@
     c.getContext('2d').drawImage(video, 0, 0);
 
     sources.push(c);
+    transforms.push({ offsetX: 0, offsetY: 0, zoom: 1 });
     updateCameraCounter();
     persist();
 
@@ -149,7 +158,7 @@
       img.onload = () => {
         URL.revokeObjectURL(url);
         sources.push(img);
-        loaded++;
+        transforms.push({ offsetX: 0, offsetY: 0, zoom: 1 });
         if (loaded === files.length) {
           persist();
           enterEdit();
@@ -170,6 +179,9 @@
   /* ---------------- edit & preview ---------------- */
 
   function enterEdit() {
+    while (transforms.length < sources.length) {
+      transforms.push({ offsetX: 0, offsetY: 0, zoom: 1 });
+    }
     showStep('edit');
     updateRatioButtons();
     sizeCanvas();
@@ -222,8 +234,27 @@
     rafPending = true;
     requestAnimationFrame(() => {
       rafPending = false;
-      E.renderComposite(canvas, sources, currentRatio);
+      E.renderComposite(canvas, sources, currentRatio, { transforms });
     });
+  }
+
+  /* ---------------- photo tray (drag-to-reorder + remove) ---------------- */
+
+  let dragSrcIdx = null;
+  let touchDragIdx = null;
+  let touchDragClone = null;
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  function movePhoto(fromIdx, toIdx) {
+    if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= sources.length || toIdx >= sources.length) return;
+    const [movedSrc] = sources.splice(fromIdx, 1);
+    const [movedTr] = transforms.splice(fromIdx, 1);
+    sources.splice(toIdx, 0, movedSrc);
+    transforms.splice(toIdx, 0, movedTr || { offsetX: 0, offsetY: 0, zoom: 1 });
+    persist();
+    renderTray();
+    draw();
   }
 
   function renderTray() {
@@ -232,17 +263,27 @@
     sources.forEach((src, idx) => {
       const thumb = document.createElement('div');
       thumb.className = 'tray-item';
+      thumb.setAttribute('draggable', 'true');
+      thumb.setAttribute('data-index', idx);
+      thumb.setAttribute('title', 'drag to reorder');
+
+      const numBadge = document.createElement('span');
+      numBadge.className = 'tray-num';
+      numBadge.textContent = idx + 1;
 
       const imgPreview = document.createElement('img');
       imgPreview.src = src.toDataURL ? src.toDataURL('image/jpeg', 0.6) : src.src;
+      imgPreview.alt = `photo ${idx + 1}`;
 
       const delBtn = document.createElement('button');
       delBtn.className = 'tray-del';
       delBtn.innerHTML = '&times;';
       delBtn.title = 'remove photo';
+      delBtn.setAttribute('aria-label', `remove photo ${idx + 1}`);
       delBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         sources.splice(idx, 1);
+        transforms.splice(idx, 1);
         persist();
         if (sources.length === 0) {
           showStep('source');
@@ -252,6 +293,49 @@
         }
       });
 
+      // Desktop HTML5 Drag and Drop
+      thumb.addEventListener('dragstart', e => {
+        dragSrcIdx = idx;
+        thumb.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(idx));
+      });
+
+      thumb.addEventListener('dragend', () => {
+        thumb.classList.remove('dragging');
+        photoTray.querySelectorAll('.tray-item').forEach(el => el.classList.remove('drag-over', 'drag-before', 'drag-after'));
+        dragSrcIdx = null;
+      });
+
+      thumb.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragSrcIdx === null || dragSrcIdx === idx) return;
+        thumb.classList.add('drag-over');
+      });
+
+      thumb.addEventListener('dragleave', () => {
+        thumb.classList.remove('drag-over');
+      });
+
+      thumb.addEventListener('drop', e => {
+        e.preventDefault();
+        thumb.classList.remove('drag-over');
+        if (dragSrcIdx !== null && dragSrcIdx !== idx) {
+          movePhoto(dragSrcIdx, idx);
+        }
+      });
+
+      // Mobile Touch Drag and Drop
+      thumb.addEventListener('touchstart', e => {
+        if (e.target.closest('.tray-del')) return;
+        const touch = e.touches[0];
+        touchDragIdx = idx;
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+      }, { passive: true });
+
+      thumb.appendChild(numBadge);
       thumb.appendChild(imgPreview);
       thumb.appendChild(delBtn);
       photoTray.appendChild(thumb);
@@ -262,6 +346,258 @@
       addBtn.style.display = sources.length >= MAX_PHOTOS ? 'none' : 'inline-flex';
     }
   }
+
+  // Global touchmove / touchend handlers for tray drag reordering on mobile
+  document.addEventListener('touchmove', e => {
+    if (touchDragIdx === null) return;
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartX);
+    const dy = Math.abs(touch.clientY - touchStartY);
+
+    if (!touchDragClone && (dx > 8 || dy > 8)) {
+      const itemEl = photoTray.querySelector(`.tray-item[data-index="${touchDragIdx}"]`);
+      if (itemEl) {
+        itemEl.classList.add('dragging');
+        touchDragClone = itemEl.cloneNode(true);
+        touchDragClone.classList.add('tray-drag-ghost');
+        document.body.appendChild(touchDragClone);
+      }
+    }
+
+    if (touchDragClone) {
+      e.preventDefault();
+      touchDragClone.style.left = `${touch.clientX - 26}px`;
+      touchDragClone.style.top = `${touch.clientY - 26}px`;
+
+      const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+      const trayItem = targetEl ? targetEl.closest('.tray-item') : null;
+      photoTray.querySelectorAll('.tray-item').forEach(el => el.classList.remove('drag-over'));
+      if (trayItem && trayItem.getAttribute('data-index') !== String(touchDragIdx)) {
+        trayItem.classList.add('drag-over');
+      }
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', e => {
+    if (touchDragIdx === null) return;
+    const changedTouch = e.changedTouches[0];
+    if (touchDragClone) {
+      touchDragClone.remove();
+      touchDragClone = null;
+      const targetEl = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+      const trayItem = targetEl ? targetEl.closest('.tray-item') : null;
+      if (trayItem) {
+        const targetIdx = parseInt(trayItem.getAttribute('data-index'), 10);
+        if (!isNaN(targetIdx) && targetIdx !== touchDragIdx) {
+          movePhoto(touchDragIdx, targetIdx);
+        }
+      }
+    }
+    if (photoTray) {
+      photoTray.querySelectorAll('.tray-item').forEach(el => el.classList.remove('dragging', 'drag-over'));
+    }
+    touchDragIdx = null;
+  });
+
+  document.addEventListener('touchcancel', () => {
+    if (touchDragClone) {
+      touchDragClone.remove();
+      touchDragClone = null;
+    }
+    if (photoTray) {
+      photoTray.querySelectorAll('.tray-item').forEach(el => el.classList.remove('dragging', 'drag-over'));
+    }
+    touchDragIdx = null;
+  });
+
+  /* ---------------- in-frame photo panning & zooming (mouse/touch/wheel) ---------------- */
+
+  let activePanSlotIndex = null;
+  let panStartPoint = null;
+  let panStartOffset = null;
+  let pinchStartDistance = null;
+  let pinchStartZoom = 1;
+
+  function getSlotIndexAt(clientX, clientY) {
+    if (!sources.length) return -1;
+    const rect = canvas.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return -1;
+
+    // Map CSS px to canvas internal coordinate
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = (clientX - rect.left) * scaleX;
+    const canvasY = (clientY - rect.top) * scaleY;
+
+    const metrics = E.getRenderMetrics(canvas, sources.length, currentRatio);
+    const slots = metrics.slots;
+    for (let i = 0; i < slots.length && i < sources.length; i++) {
+      const s = slots[i];
+      if (canvasX >= s.x && canvasX <= s.x + s.w && canvasY >= s.y && canvasY <= s.y + s.h) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  canvas.addEventListener('mousedown', e => {
+    const slotIdx = getSlotIndexAt(e.clientX, e.clientY);
+    if (slotIdx === -1) return;
+    e.preventDefault();
+    activePanSlotIndex = slotIdx;
+    panStartPoint = { x: e.clientX, y: e.clientY };
+    const tr = getTransform(slotIdx);
+    panStartOffset = { x: tr.offsetX, y: tr.offsetY };
+    canvas.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (activePanSlotIndex === null) {
+      if (!studio.hidden && !steps.edit.hidden) {
+        const overIdx = getSlotIndexAt(e.clientX, e.clientY);
+        canvas.style.cursor = overIdx !== -1 ? 'grab' : 'default';
+      }
+      return;
+    }
+    const dx = e.clientX - panStartPoint.x;
+    const dy = e.clientY - panStartPoint.y;
+
+    const rect = canvas.getBoundingClientRect();
+    const metrics = E.getRenderMetrics(canvas, sources.length, currentRatio);
+    const slot = metrics.slots[activePanSlotIndex];
+    const img = sources[activePanSlotIndex];
+    if (!slot || !img) return;
+
+    const imgW = img.width || img.videoWidth || 1;
+    const imgH = img.height || img.videoHeight || 1;
+    const tr = getTransform(activePanSlotIndex);
+    const zoom = tr.zoom || 1.0;
+    const baseScale = Math.max(slot.w / imgW, slot.h / imgH);
+    const finalScale = baseScale * zoom;
+    const sw = slot.w / finalScale;
+    const sh = slot.h / finalScale;
+    const maxSlackX = Math.max(1, (imgW - sw) / 2);
+    const maxSlackY = Math.max(1, (imgH - sh) / 2);
+
+    // Convert client px delta to canvas coordinate delta
+    const scaleCanvasX = canvas.width / rect.width;
+    const scaleCanvasY = canvas.height / rect.height;
+    const canvasDx = dx * scaleCanvasX;
+    const canvasDy = dy * scaleCanvasY;
+
+    // Dragging right canvasDx > 0 means we want to show more left content -> increment offsetX
+    const deltaOffsetX = (canvasDx / finalScale) / maxSlackX;
+    const deltaOffsetY = (canvasDy / finalScale) / maxSlackY;
+
+    tr.offsetX = Math.max(-1, Math.min(1, panStartOffset.x + deltaOffsetX));
+    tr.offsetY = Math.max(-1, Math.min(1, panStartOffset.y + deltaOffsetY));
+    draw();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (activePanSlotIndex !== null) {
+      activePanSlotIndex = null;
+      panStartPoint = null;
+      panStartOffset = null;
+      canvas.style.cursor = 'grab';
+      persist();
+    }
+  });
+
+  // Touch Pan and Pinch-to-zoom on Canvas
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const slotIdx = getSlotIndexAt(touch.clientX, touch.clientY);
+      if (slotIdx !== -1) {
+        activePanSlotIndex = slotIdx;
+        panStartPoint = { x: touch.clientX, y: touch.clientY };
+        const tr = getTransform(slotIdx);
+        panStartOffset = { x: tr.offsetX, y: tr.offsetY };
+      }
+    } else if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const midX = (t1.clientX + t2.clientX) / 2;
+      const midY = (t1.clientY + t2.clientY) / 2;
+      const slotIdx = getSlotIndexAt(midX, midY);
+      if (slotIdx !== -1) {
+        activePanSlotIndex = slotIdx;
+        const tr = getTransform(slotIdx);
+        pinchStartDistance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        pinchStartZoom = tr.zoom || 1.0;
+      }
+    }
+  }, { passive: true });
+
+  canvas.addEventListener('touchmove', e => {
+    if (activePanSlotIndex === null) return;
+    e.preventDefault();
+    const tr = getTransform(activePanSlotIndex);
+
+    if (e.touches.length === 1 && panStartPoint && panStartOffset) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - panStartPoint.x;
+      const dy = touch.clientY - panStartPoint.y;
+
+      const rect = canvas.getBoundingClientRect();
+      const metrics = E.getRenderMetrics(canvas, sources.length, currentRatio);
+      const slot = metrics.slots[activePanSlotIndex];
+      const img = sources[activePanSlotIndex];
+      if (!slot || !img) return;
+
+      const imgW = img.width || img.videoWidth || 1;
+      const imgH = img.height || img.videoHeight || 1;
+      const zoom = tr.zoom || 1.0;
+      const baseScale = Math.max(slot.w / imgW, slot.h / imgH);
+      const finalScale = baseScale * zoom;
+      const sw = slot.w / finalScale;
+      const sh = slot.h / finalScale;
+      const maxSlackX = Math.max(1, (imgW - sw) / 2);
+      const maxSlackY = Math.max(1, (imgH - sh) / 2);
+
+      const scaleCanvasX = canvas.width / rect.width;
+      const scaleCanvasY = canvas.height / rect.height;
+      const canvasDx = dx * scaleCanvasX;
+      const canvasDy = dy * scaleCanvasY;
+
+      const deltaOffsetX = (canvasDx / finalScale) / maxSlackX;
+      const deltaOffsetY = (canvasDy / finalScale) / maxSlackY;
+
+      tr.offsetX = Math.max(-1, Math.min(1, panStartOffset.x + deltaOffsetX));
+      tr.offsetY = Math.max(-1, Math.min(1, panStartOffset.y + deltaOffsetY));
+      draw();
+    } else if (e.touches.length === 2 && pinchStartDistance) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const factor = dist / pinchStartDistance;
+      tr.zoom = Math.max(1.0, Math.min(3.5, pinchStartZoom * factor));
+      draw();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', e => {
+    if (e.touches.length === 0) {
+      activePanSlotIndex = null;
+      panStartPoint = null;
+      panStartOffset = null;
+      pinchStartDistance = null;
+      persist();
+    }
+  });
+
+  // Mouse wheel to zoom in/out on specific photo slot
+  canvas.addEventListener('wheel', e => {
+    const slotIdx = getSlotIndexAt(e.clientX, e.clientY);
+    if (slotIdx === -1) return;
+    e.preventDefault();
+    const tr = getTransform(slotIdx);
+    const zoomDelta = e.deltaY < 0 ? 0.1 : -0.1;
+    tr.zoom = Math.max(1.0, Math.min(3.5, (tr.zoom || 1.0) + zoomDelta));
+    draw();
+    persist();
+  }, { passive: false });
 
   /* ---------------- persistence ---------------- */
 
@@ -278,6 +614,7 @@
         return c.toDataURL('image/jpeg', 0.82);
       });
       localStorage.setItem(KEY, JSON.stringify(serialized));
+      localStorage.setItem(TRANSFORMS_KEY, JSON.stringify(transforms));
     } catch (err) { /* localStorage quota guard */ }
     persistFrame();
   }
@@ -297,7 +634,7 @@
       const c = document.createElement('canvas');
       c.width = Math.max(1, Math.round(cardW * k));
       c.height = Math.max(1, Math.round(cardH * k));
-      E.renderComposite(c, sources, currentRatio);
+      E.renderComposite(c, sources, currentRatio, { transforms });
       localStorage.setItem(FRAME_KEY, c.toDataURL('image/jpeg', 0.85));
       window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
     } catch (err) {
@@ -309,6 +646,10 @@
   function restore() {
     try {
       const raw = localStorage.getItem(KEY);
+      const rawTr = localStorage.getItem(TRANSFORMS_KEY);
+      if (rawTr) {
+        try { transforms = JSON.parse(rawTr) || []; } catch (e) { transforms = []; }
+      }
       if (!raw) return;
       const list = JSON.parse(raw);
       if (!Array.isArray(list) || !list.length) return;
@@ -316,12 +657,16 @@
       let loaded = 0;
       sources = [];
       const targetList = list.slice(0, MAX_PHOTOS);
-      targetList.forEach(dataUrl => {
+      targetList.forEach((dataUrl, i) => {
         const img = new Image();
         img.onload = () => {
-          sources.push(img);
+          sources[i] = img;
           loaded++;
           if (loaded === targetList.length) {
+            sources = sources.filter(Boolean);
+            while (transforms.length < sources.length) {
+              transforms.push({ offsetX: 0, offsetY: 0, zoom: 1 });
+            }
             if (!studio.hidden && !steps.source.hidden) enterEdit();
             if (!localStorage.getItem(FRAME_KEY)) persistFrame();
             else window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
@@ -367,7 +712,9 @@
 
   $('changePhotoBtn').addEventListener('click', () => {
     sources = [];
+    transforms = [];
     localStorage.removeItem(KEY);
+    localStorage.removeItem(TRANSFORMS_KEY);
     localStorage.removeItem(FRAME_KEY);
     window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
     $('sourceNote').textContent = '';
@@ -375,7 +722,9 @@
   });
   window.addEventListener('resetYearTwoStudio', () => {
     sources = [];
+    transforms = [];
     localStorage.removeItem(KEY);
+    localStorage.removeItem(TRANSFORMS_KEY);
     localStorage.removeItem(FRAME_KEY);
     window.dispatchEvent(new CustomEvent('yearTwoPhotoSaved'));
     $('sourceNote').textContent = '';
@@ -401,7 +750,7 @@
     btn.disabled = true;
     note.textContent = 'printing your polaroid…';
     try {
-      await E.exportPNG(sources, currentRatio);
+      await E.exportPNG(sources, currentRatio, { transforms });
       await persistFrame();
       note.textContent = 'saved! check your downloads & see it pinned at the end.';
     } catch (err) {
